@@ -1,0 +1,246 @@
+#ifndef RIGEL_H_
+#define RIGEL_H_
+
+#include <mutex>
+#include <sstream>
+
+#include "context.hpp"
+#include "stdlib.hpp"
+
+namespace Rigel {
+	class Rigel {
+	private:
+		// Initialize reduce typegen
+		void init_reduce_tg() {
+			static std::once_flag initialized;
+			std::call_once(initialized, [&](){
+					rigel->newTypeGen(
+						"reduce",
+						{{"bit_width", AINT}, {"n",AINT}},
+						[](Context* c, Args args) -> Type* {
+							Type* data_in = c->Array(args.at("bit_width")->arg2Int(), c->BitIn());
+							Type* data_out = c->Flip(data_in);
+		
+							Type* reduce_t = c->Record({
+									{"in", c->Array(args.at("n")->arg2Int(), data_in)},
+									{"out", data_out}
+								});
+			
+							return reduce_t;
+						});
+				});
+		}
+
+		// Initialize addn generator
+		void init_addn_g() {
+			init_reduce_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&](){
+					// Declare the addn generator
+					Generator* addn_g = rigel->newGeneratorDecl(
+						"addn",
+						{{"bit_width", AINT}, {"n", AINT}},
+						rigel->getTypeGen("reduce"));
+
+					// addn definition
+					addn_g->addDef(
+						[](ModuleDef* addn_def, Context* c, Type* /*t*/, Args args) -> void {
+							Namespace* stdlib = getStdlib(c);
+							Namespace* rigel = c->getNamespace("rigel");
+
+							Generator* add2_g = stdlib->getGenerator("add2");
+							Generator* addn_g = rigel->getGenerator("addn");
+			
+							int n = args.at("n")->arg2Int();
+				
+							Wireable* self = addn_def->sel("self");
+
+							// Each stage needs n/2 adders
+							Wireable** adders = (Wireable**)calloc(n/2, sizeof(Wireable*));
+
+							Args add2_a = {{"bit_width", args.at("bit_width")}};
+			
+							for (int k = 0; k < n/2; k++) {
+								std::ostringstream oss;
+								oss << "add2" << "_" << k;
+								adders[k] = addn_def->addInstance(oss.str(), add2_g, add2_a);
+							}
+
+							// Wire inputs to adder
+							Wireable* in = self->sel("in");
+
+							for (int k = 0; k < n/2; k++) {
+								addn_def->wire(in->sel(2*k+0), adders[k]->sel("in0"));
+								addn_def->wire(in->sel(2*k+1), adders[k]->sel("in1"));
+							}
+
+							// Wire outputs
+							if (n > 2) {
+								// Recurse into another addn
+								Args addn_a = {{"bit_width", args.at("bit_width")}, {"n", c->int2Arg(n/2+n%2)}};
+								Wireable* addn_next = addn_def->addInstance("addn", addn_g, addn_a);
+
+								for (int k = 0; k < n/2; k++) {
+									addn_def->wire(adders[k]->sel("out"), addn_next->sel("in")->sel(k));
+								}
+								if (n%2 != 0) {
+									addn_def->wire(in->sel(n-1), addn_next->sel("in")->sel(n/2));
+								}
+							}
+							else {
+								// Base case 2 inputs
+								assert(n == 2);
+								addn_def->wire(adders[0]->sel("out"), self->sel("out"));
+							}
+						});
+				});
+		}
+
+		// Initialize conv typegen
+		void init_conv_tg() {
+			static std::once_flag initialized;
+			std::call_once(initialized, [&](){
+					rigel->newTypeGen(
+						"conv",
+						{{"width", AINT}, {"height", AINT}, {"bit_width", AINT}},
+						[](Context* c, Args args) -> Type* {
+							Type* elem_in = c->Array(args.at("bit_width")->arg2Int(), c->BitIn());
+		
+							Type* conv_t = c->Record({
+									{"in", c->Array(args.at("height")->arg2Int(), c->Array(args.at("width")->arg2Int(), elem_in))},
+									{"wt", c->Array(args.at("height")->arg2Int(), c->Array(args.at("width")->arg2Int(), elem_in))},
+									{"out", c->Flip(elem_in)}
+								});
+			
+							return conv_t;
+						});
+				});
+		}
+
+		// Initialize conv generator
+		void init_conv_g() {
+			init_addn_g();
+			init_conv_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&](){
+					// Declare the addn generator
+					Generator* conv_g = rigel->newGeneratorDecl(
+						"conv",
+						{{"width", AINT}, {"height", AINT}, {"bit_width", AINT}},
+						rigel->getTypeGen("conv"));
+
+					// conv definition
+					conv_g->addDef(
+						[](ModuleDef* conv_def, Context* c, Type* /*t*/, Args args) -> void {
+							Namespace* stdlib = getStdlib(c);
+							Namespace* rigel = c->getNamespace("rigel");
+
+							//TODO:remove
+							int bpp = 8;
+							Type* pixel_in = c->Array(bpp, c->BitIn());
+							Type* pixel_out = c->Flip(pixel_in);
+
+							// We need a multiply module
+							Type* binop_t = c->Record({
+									{"a", pixel_in},
+									{"b", pixel_in},
+									{"out", pixel_out}
+								});
+
+
+							Module* mult_m = rigel->newModuleDecl("mult", binop_t);
+							//ENDTODO
+
+							Generator* add2_g = stdlib->getGenerator("add2");
+							Generator* addn_g = rigel->getGenerator("addn");
+			
+							int height = args.at("height")->arg2Int();
+							int width = args.at("width")->arg2Int();
+							int n = width*height;
+				
+							Wireable* self = conv_def->sel("self");
+
+							// Declare all the multipliers we need
+							Wireable*** mults = (Wireable***)calloc(height, sizeof(Wireable**));
+
+							for (int h = 0; h < height; h++) {
+								mults[h] = (Wireable**)calloc(width, sizeof(Wireable*));
+		  
+								for(int w = 0; w < width; w++) {
+									std::stringstream oss;
+									oss << "mult_" << (h*width + w);
+									mults[h][w] = conv_def->addInstance(oss.str(), mult_m, {{"bit_width",c->int2Arg(bpp)}}); //TODO: each of these mults needs a unique name
+								}
+							}
+
+							// Sum the multiplied weights/inputs
+							Wireable* add_n = conv_def->addInstance("addn", addn_g, {{"bit_width", args.at("bit_width")}, {"n", c->int2Arg(width*height)}});
+
+							// Wire everything together
+							Wireable* input = self->sel("in");
+							Wireable* weight = self->sel("wt");
+							Wireable* output = self->sel("out");
+							for (int h = 0; h < height; ++h) {
+								Wireable* input_row = input->sel(h);
+								Wireable* weight_row = weight->sel(h);
+								for (int w = 0; w < width; ++w) {
+									conv_def->wire(input_row->sel(w), mults[h][w]->sel("a"));
+									conv_def->wire(weight_row->sel(w), mults[h][w]->sel("b"));
+									conv_def->wire(mults[h][w]->sel("out"), add_n->sel("in")->sel(h*width+w));
+								}
+							}
+							conv_def->wire(add_n->sel("out"), output);
+						});
+				});
+		}
+	public:
+		Context* ctx;
+		Namespace* rigel;
+
+		Rigel(Context* c) {
+			ctx = c;
+			if (ctx->hasNamespace("rigel")) {
+				// Should this be an error?
+				//TODO: if this is the case, then all the singleton init functions will break because we'll have 2 instances of a Rigel class in one context, with each having its own copies of the static init flags.
+				//TODO: possible solution: put the flags in the rigel namespace, so then they will be shared across all rigel classes
+				//TODO: issue: if we put the flags in the rigel namespace, multiple rigel classes using different contexts will not be initialized correctly?
+				rigel = ctx->getNamespace("rigel");
+			}
+			else {
+				rigel = ctx->newNamespace("rigel");
+			}
+		}
+		Rigel(Rigel const&) = delete;
+		void operator=(Rigel const&) = delete;
+
+		Module* addn(size_t n, size_t bit_width) {
+			std::cout << "ayy" << std::endl;
+			init_addn_g();
+			init_reduce_tg();
+
+			Args args = Args({{"bit_width", ctx->int2Arg(bit_width)}, {"n", ctx->int2Arg(n)}});
+			TypeGen tg = rigel->getTypeGen("reduce");
+			return rigel->runGenerator(
+				rigel->getGenerator("addn"),
+				args,
+				rigel->getTypeGen("reduce").run(ctx, args));
+		}
+
+		Module* conv(size_t width, size_t height, size_t bit_width) {
+			//TODO: the parameters need to also take in weights
+			//TODO: maybe the function shouldn't take in bit_width, but rather a Type* and an array of values that are interpreted as the type passed in for the weights?
+			init_conv_g();
+			init_conv_tg();
+
+			Args args = Args({{"width", ctx->int2Arg(width)}, {"height", ctx->int2Arg(height)}, {"bit_width", ctx->int2Arg(bit_width)}});
+			return rigel->runGenerator(
+				rigel->getGenerator("conv"),
+				args,
+				rigel->getTypeGen("conv").run(ctx, args));
+		}
+	};
+}
+
+#endif
