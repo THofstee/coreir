@@ -5,11 +5,60 @@
 #include <sstream>
 
 #include "context.hpp"
-#include "stdlib.hpp"
 
 namespace Rigel {
 	class Rigel {
 	private:
+		// Initialize binop typegen
+		void init_binop_tg() {
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				rigel->newTypeGen(
+					"binop",
+					{{"bit_width", AINT}},
+					[](Context* c, Args args) -> Type* {
+						Type* data_in = c->Array(args.at("bit_width")->arg2Int(), c->BitIn());
+						Type* data_out = c->Flip(data_in);
+
+						Type* reduce_t = c->Record({
+							{"a", data_in},
+							{"b", data_in},
+							{"out", data_out}
+					});
+
+					return reduce_t;
+				});
+			});
+		}
+
+		// Initialize add2 generator
+		void init_add2_g() {
+			init_binop_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				// Declare the addn generator
+				Generator* add2_g = rigel->newGeneratorDecl(
+					"add2",
+					{{"bit_width", AINT }},
+					rigel->getTypeGen("binop"));
+			});
+		}
+
+		// Initialize mul2 generator
+		void init_mul2_g() {
+			init_binop_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				// Declare the addn generator
+				Generator* mul2_g = rigel->newGeneratorDecl(
+					"mul2",
+					{{"bit_width", AINT}},
+					rigel->getTypeGen("binop"));
+			});
+		}
+
 		// Initialize reduce typegen
 		void init_reduce_tg() {
 			static std::once_flag initialized;
@@ -34,6 +83,7 @@ namespace Rigel {
 		// Initialize addn generator
 		void init_addn_g() {
 			init_reduce_tg();
+			init_add2_g();
 
 			static std::once_flag initialized;
 			std::call_once(initialized, [&](){
@@ -46,10 +96,9 @@ namespace Rigel {
 					// addn definition
 					addn_g->addDef(
 						[](ModuleDef* addn_def, Context* c, Type* /*t*/, Args args) -> void {
-							Namespace* stdlib = getStdlib(c);
 							Namespace* rigel = c->getNamespace("rigel");
 
-							Generator* add2_g = stdlib->getGenerator("add2");
+							Generator* add2_g = rigel->getGenerator("add2");
 							Generator* addn_g = rigel->getGenerator("addn");
 			
 							int n = args.at("n")->arg2Int();
@@ -71,8 +120,8 @@ namespace Rigel {
 							Wireable* in = self->sel("in");
 
 							for (int k = 0; k < n/2; k++) {
-								addn_def->wire(in->sel(2*k+0), adders[k]->sel("in0"));
-								addn_def->wire(in->sel(2*k+1), adders[k]->sel("in1"));
+								addn_def->wire(in->sel(2*k+0), adders[k]->sel("a"));
+								addn_def->wire(in->sel(2*k+1), adders[k]->sel("b"));
 							}
 
 							// Wire outputs
@@ -121,6 +170,7 @@ namespace Rigel {
 		// Initialize conv generator
 		void init_conv_g() {
 			init_addn_g();
+			init_mul2_g();
 			init_conv_tg();
 
 			static std::once_flag initialized;
@@ -134,7 +184,6 @@ namespace Rigel {
 					// conv definition
 					conv_g->addDef(
 						[](ModuleDef* conv_def, Context* c, Type* /*t*/, Args args) -> void {
-							Namespace* stdlib = getStdlib(c);
 							Namespace* rigel = c->getNamespace("rigel");
 
 							//TODO:remove
@@ -142,19 +191,10 @@ namespace Rigel {
 							Type* pixel_in = c->Array(bpp, c->BitIn());
 							Type* pixel_out = c->Flip(pixel_in);
 
-							// We need a multiply module
-							Type* binop_t = c->Record({
-									{"a", pixel_in},
-									{"b", pixel_in},
-									{"out", pixel_out}
-								});
-
-
-							Module* mult_m = rigel->newModuleDecl("mult", binop_t);
 							//ENDTODO
 
-							Generator* add2_g = stdlib->getGenerator("add2");
 							Generator* addn_g = rigel->getGenerator("addn");
+							Generator* mul2_g = rigel->getGenerator("mul2");
 			
 							int height = args.at("height")->arg2Int();
 							int width = args.at("width")->arg2Int();
@@ -171,7 +211,7 @@ namespace Rigel {
 								for(int w = 0; w < width; w++) {
 									std::stringstream oss;
 									oss << "mult_" << (h*width + w);
-									mults[h][w] = conv_def->addInstance(oss.str(), mult_m, {{"bit_width",c->int2Arg(bpp)}}); //TODO: each of these mults needs a unique name
+									mults[h][w] = conv_def->addInstance(oss.str(), mul2_g, {{"bit_width",c->int2Arg(bpp)}});
 								}
 							}
 
@@ -216,6 +256,7 @@ namespace Rigel {
 		void operator=(Rigel const&) = delete;
 
 		Module* addn(size_t n, size_t bit_width) {
+			//TODO: replace bit_width with a Type* and then overload the adds/mults with the type (float/binary)
 			std::cout << "ayy" << std::endl;
 			init_addn_g();
 			init_reduce_tg();
@@ -229,8 +270,7 @@ namespace Rigel {
 		}
 
 		Module* conv(size_t width, size_t height, size_t bit_width) {
-			//TODO: the parameters need to also take in weights
-			//TODO: maybe the function shouldn't take in bit_width, but rather a Type* and an array of values that are interpreted as the type passed in for the weights?
+			//TODO: replace bit_width with a Type* and then overload the adds/mults with the type (float/binary)
 			init_conv_g();
 			init_conv_tg();
 
