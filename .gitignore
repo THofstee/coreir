@@ -1,4 +1,5 @@
-build/*
-tests/unit/build/*
+build/
+temp/
 *~
 \#*\#
+_*.json
