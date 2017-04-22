@@ -6,6 +6,8 @@
 
 #include "context.hpp"
 
+using namespace CoreIR;
+
 namespace Rigel {
 	class Rigel {
 	private:
@@ -56,6 +58,41 @@ namespace Rigel {
 					"mul2",
 					{{"bit_width", AINT}},
 					rigel->getTypeGen("binop"));
+			});
+		}
+
+		// Initialize stream typegen
+		void init_stream_tg() {
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				rigel->newTypeGen(
+					"stream",
+					{{"bit_width", AINT}},
+					[](Context* c, Args args) -> Type* {
+						Type* data_in = c->Array(args.at("bit_width")->arg2Int(), c->BitIn());
+						Type* data_out = c->Flip(data_in);
+
+						Type* stream_t = c->Record({
+							{"in", data_in},
+							{"out", data_out}
+					});
+
+					return stream_t;
+				});
+			});
+		}
+
+		// Initialize reg generator
+		void init_reg_g() {
+			init_stream_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				// Declare the reg generator
+				Generator* reg_g = rigel->newGeneratorDecl(
+					"reg",
+					{{"bit_width", AINT}},
+					rigel->getTypeGen("stream"));
 			});
 		}
 
@@ -186,13 +223,6 @@ namespace Rigel {
 						[](ModuleDef* conv_def, Context* c, Type* /*t*/, Args args) -> void {
 							Namespace* rigel = c->getNamespace("rigel");
 
-							//TODO:remove
-							int bpp = 8;
-							Type* pixel_in = c->Array(bpp, c->BitIn());
-							Type* pixel_out = c->Flip(pixel_in);
-
-							//ENDTODO
-
 							Generator* addn_g = rigel->getGenerator("addn");
 							Generator* mul2_g = rigel->getGenerator("mul2");
 			
@@ -211,7 +241,7 @@ namespace Rigel {
 								for(int w = 0; w < width; w++) {
 									std::stringstream oss;
 									oss << "mult_" << (h*width + w);
-									mults[h][w] = conv_def->addInstance(oss.str(), mul2_g, {{"bit_width",c->int2Arg(bpp)}});
+									mults[h][w] = conv_def->addInstance(oss.str(), mul2_g, {{"bit_width", args.at("bit_width")}});
 								}
 							}
 
@@ -232,6 +262,84 @@ namespace Rigel {
 								}
 							}
 							conv_def->wire(add_n->sel("out"), output);
+						});
+				});
+		}
+
+		// Initialize taps typegen
+		void init_taps_tg() {
+			static std::once_flag initialized;
+			std::call_once(initialized, [&]() {
+				rigel->newTypeGen(
+						"taps",
+						{{"width", AINT}, {"height", AINT}, {"bit_width", AINT}},
+						[](Context* c, Args args) -> Type* {
+							Type* elem_in = c->Array(args.at("bit_width")->arg2Int(), c->BitIn());
+		
+							Type* taps_t = c->Record({
+									{"in", elem_in},
+									{"out", c->Array(args.at("height")->arg2Int(), c->Array(args.at("width")->arg2Int(), c->Flip(elem_in)))}
+								});
+			
+							return taps_t;
+				});
+			});
+		}
+
+		// Initialize linebuf generator
+		void init_linebuf_g() {
+			init_reg_g();
+			init_taps_tg();
+
+			static std::once_flag initialized;
+			std::call_once(initialized, [&](){
+					// Declare the addn generator
+					Generator* linebuf_g = rigel->newGeneratorDecl(
+						"linebuf",
+						{{"width", AINT}, {"height", AINT}, {"im_width", AINT}, {"im_height", AINT}, {"bit_width", AINT}},
+						rigel->getTypeGen("taps"));
+
+					// conv definition
+					linebuf_g->addDef(
+						[](ModuleDef* linebuf_def, Context* c, Type* /*t*/, Args args) -> void {
+							Namespace* rigel = c->getNamespace("rigel");
+
+							Generator* reg_g = rigel->getGenerator("reg");
+			
+							int height = args.at("height")->arg2Int();
+							int width = args.at("width")->arg2Int();
+							int im_height = args.at("im_height")->arg2Int();
+							int im_width = args.at("im_width")->arg2Int();
+							int n = width*height;
+				
+							Wireable* self = linebuf_def->sel("self");
+
+							// We need (height-1)*im_width + width registers
+							int buf_size = (height-1)*im_width + width;
+							Wireable** registers = (Wireable**)calloc(buf_size, sizeof(Wireable*));
+
+							Args reg_a = {{"bit_width", args.at("bit_width")}};
+
+							for (int k = 0; k < buf_size; k++) {
+								std::ostringstream oss;
+								oss << "reg" << "_" << k;
+								registers[k] = linebuf_def->addInstance(oss.str(), reg_g, reg_a);
+							}
+
+							// Wire up the registers in a chain
+							for (int k = 1; k < buf_size; k++) {
+								linebuf_def->wire(registers[k]->sel("out"), registers[k-1]->sel("in"));
+							}
+
+							// Wire inputs
+							linebuf_def->wire(self->sel("in"), registers[buf_size-1]->sel("in"));
+
+							// Wire outputs
+							for (int h = 0; h < height; h++) {
+								for(int w = 0; w < width; w++) {
+									linebuf_def->wire(registers[h*im_width+w]->sel("out"), self->sel("out")->sel(h)->sel(w));
+								}
+							}
 						});
 				});
 		}
@@ -279,6 +387,25 @@ namespace Rigel {
 				rigel->getGenerator("conv"),
 				args,
 				rigel->getTypeGen("conv").run(ctx, args));
+		}
+
+		Module* linebuf(size_t width, size_t height, size_t im_width, size_t im_height, size_t bit_width) {
+			//TODO: replace bit_width with a Type* and then overload the adds/mults with the type (float/binary)
+			init_linebuf_g();
+			init_taps_tg();
+
+			Args args = Args({
+				{"width", ctx->int2Arg(width)},
+				{"height", ctx->int2Arg(height)},
+				{"im_width", ctx->int2Arg(im_width)},
+				{"im_height", ctx->int2Arg(im_height)},
+				{"bit_width", ctx->int2Arg(bit_width)}
+			});
+
+			return rigel->runGenerator(
+				rigel->getGenerator("linebuf"),
+				args,
+				rigel->getTypeGen("taps").run(ctx, args));
 		}
 	};
 }
