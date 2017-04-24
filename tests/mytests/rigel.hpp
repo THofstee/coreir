@@ -369,8 +369,11 @@ namespace Rigel {
 			init_addn_g();
 			init_reduce_tg();
 
-			Args args = Args({{"bit_width", ctx->int2Arg(bit_width)}, {"n", ctx->int2Arg(n)}});
-			TypeGen tg = rigel->getTypeGen("reduce");
+			Args args = Args({
+				{"bit_width", ctx->int2Arg(bit_width)},
+				{"n", ctx->int2Arg(n)}
+			});
+			
 			return rigel->runGenerator(
 				rigel->getGenerator("addn"),
 				args,
@@ -382,7 +385,12 @@ namespace Rigel {
 			init_conv_g();
 			init_conv_tg();
 
-			Args args = Args({{"width", ctx->int2Arg(width)}, {"height", ctx->int2Arg(height)}, {"bit_width", ctx->int2Arg(bit_width)}});
+			Args args = Args({
+				{"width", ctx->int2Arg(width)},
+				{"height", ctx->int2Arg(height)},
+				{"bit_width", ctx->int2Arg(bit_width)}
+			});
+			
 			return rigel->runGenerator(
 				rigel->getGenerator("conv"),
 				args,
