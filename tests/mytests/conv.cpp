@@ -15,40 +15,12 @@ using namespace CoreIR;
 int main() {
 	// New context
 	Context* c = newContext();
-  
-	Namespace* g = c->getGlobal();
-  
-	Namespace* stdlib = getStdlib(c);
-
 	Rigel::Rigel rigel (c);
 
 	// Define a pixel
 	int bpp = 8;
-	Type* pixel_in = c->Array(bpp, c->BitIn());
-	Type* pixel_out = c->Flip(pixel_in);
-
-	// We need a multiply module
-	Type* binop_t = c->Record({
-			{"a", pixel_in},
-			{"b", pixel_in},
-			{"out", pixel_out}
-		});
-
-	Module* mult_m = g->newModuleDecl("mult", binop_t);
-  
-	// Define our input/weight matrices
 	int width = 3;
 	int height = 3;
-	Type* mat_wxh_in = c->Array(height,c->Array(width,pixel_in));
-	
-	int n = width*height;
-  
-	// Define the type of the convolution
-	Type* conv_t = c->Record({
-			{"in", mat_wxh_in},
-			{"wt", mat_wxh_in},
-			{"out", pixel_out}
-		});
 
 	Module* conv_m = rigel.conv(width, height, bpp);
   

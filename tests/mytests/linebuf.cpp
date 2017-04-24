@@ -15,11 +15,6 @@ using namespace CoreIR;
 int main() {
 	// New context
 	Context* c = newContext();
-
-	Namespace* g = c->getGlobal();
-
-	Namespace* stdlib = getStdlib(c);
-
 	Rigel::Rigel rigel(c);
 
 	// Define a pixel
