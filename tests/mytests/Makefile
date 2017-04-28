@@ -10,7 +10,7 @@ ifeq ($(COREIRCONFIG),g++-4.9)
 CXX = g++-4.9
 endif
 
-CXXFLAGS = -std=c++11  -Wall  -fPIC -fdiagnostics-color=always
+CXXFLAGS = -std=c++11  -Wall  -fPIC -fdiagnostics-color=always -pthread
 
 ifdef COREDEBUG
 CXXFLAGS += -O0 -g3 -D_GLIBCXX_DEBUG 
