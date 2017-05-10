@@ -47,7 +47,7 @@ extern COREModule* CORENewModule(CORENamespace* ns, char* name, COREType* type, 
 
 extern void COREPrintModule(COREModule* m);
 extern COREModuleDef* COREModuleNewDef(COREModule* m);
-extern COREModuleDef* COREModuleGetDefs(COREModule* m);
+extern COREModuleDef* COREModuleGetDef(COREModule* m);
 void COREModuleAddDef(COREModule* module, COREModuleDef* module_def);
 
 //Errors:

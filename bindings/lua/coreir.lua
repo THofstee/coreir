@@ -33,5 +33,7 @@ ffi.copy(module_cstr, module_str)
 
 local stdlib = coreir_stdlib.CORELoadLibrary_stdlib(test_ctx)
 local test_gen = coreir_lib.CORELoadModule(test_ctx, module_cstr, err)
+coreir_lib.COREPrintModule(test_gen)
+test_gen_defs = coreir_lib.COREModuleGetDef(test_gen)
 
 return coreir
