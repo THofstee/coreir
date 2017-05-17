@@ -1,25 +1,10 @@
-#include "typecheck.hpp"
+
+#include "moduledef.hpp"
+//#include "common.hpp"
 
 using namespace std;
-   
+
 namespace CoreIR {
-
-bool typecheckRec(Context* c, Module* m, unordered_set<Module*>* checked);
-
-
-// This 'typechecks' everything
-  //   Verifies all selects are valid
-  //   Verifies all connections are valid. type <==> FLIP(type)
-  //   Verifies inputs are only connected once
-
-void typecheck(Context* c, Module* m, bool* err) {
-  cout << "Typechecking" << endl;
-  unordered_set<Module*> checked;
-  *err = typecheckRec(c,m,&checked);
-  cout << "Done Typechecking" << endl;
-}
-
-
 //True is error
 //False is no error
 bool checkTypes(Wireable* a, Wireable* b) {
@@ -55,11 +40,12 @@ bool checkInputConnected(Wireable* w, Error* e) {
     return true;
   }
   bool err = false;
-  for (auto it : w->getChildren()) {
+  for (auto it : w->getSelects()) {
     err |= checkInputConnected(it.second,e);
   }
   return err;
 }
+
 //TODO do stuff in numwires==1 even if errors on numwirew>1
 //Checks if multiple thigns are connected to an input. If so an error
 //True is error
@@ -74,13 +60,13 @@ bool checkInputOutputs(Wireable* w, Error* e) {
     return true;
   }
   else if (numwires==0 ) {
-    for ( auto it : w->getChildren()) {
+    for ( auto it : w->getSelects()) {
       err |= checkInputOutputs(it.second,e);
     }
   }
   else if (numwires==1) {
     // Check if any children is an input and connected
-    for ( auto it : w->getChildren()) {
+    for ( auto it : w->getSelects()) {
       if(checkInputConnected(it.second,e)) {
         err = true;
         for (auto other : w->getConnectedWireables() )
@@ -93,45 +79,38 @@ bool checkInputOutputs(Wireable* w, Error* e) {
   }
   return err;
 }
-//Recursively check if there are type errors
+
 //true is Error
 //false is no error
-bool typecheckRec(Context* c, Module* m, unordered_set<Module*>* checked) {
-  
-  //Correct if has no definition
-  if (!m->hasDef()) return false;
-  
-  //Already checked
-  if (checked->count(m) > 0 ) return false;
-  
-  ModuleDef* mdef = m->getDef();
+bool ModuleDef::validate() {
+  ModuleDef* mdef = this;
+  Context* c = mdef->getModule()->getContext();
   
   bool err = false;
   // Check for type compatability of every connection
   for (auto connection : mdef->getConnections() ) {
     err |= checkTypes(connection.first,connection.second);
   }
+  
   //Check if an input is connected to multiple outputs
   vector<Wireable*> work;
   work.push_back(mdef->getInterface());
-  for (auto instmap : mdef->getInstances() ) work.push_back(instmap.second);
+  for (auto instmap : mdef->getInstances() ) {
+    work.push_back(instmap.second);
+  }
   for (auto w : work) {
     Error e;
     e.message("Cannot connect multiple outputs to an inputs");
-    e.message("In Module: " + m->getName());
+    e.message("In Module: " + mdef->getModule()->getName());
     if (checkInputOutputs(w,&e)) {
       err = true;
       c->error(e);
     }
   }
-
-  //Recursively check all instances
-  for (auto instmap : mdef->getInstances() ) {
-    Module* modRef = instmap.second->getModuleRef();
-    err |= typecheckRec(c,modRef,checked);
-  }
-  checked->insert(m);
   return err;
 }
+
+
+
 
 }//CoreIR namespace

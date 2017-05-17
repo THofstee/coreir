@@ -39,7 +39,6 @@ class Instantiable {
     bool isKind(InstantiableKind k) const { return kind==k;}
     InstantiableKind getKind() const { return kind;}
     
-    //TODO comment these out
     Context* getContext();
     Params getConfigParams() { return configparams;}
     Metadata getMetadata() { return metadata;}
@@ -70,6 +69,7 @@ class Generator : public Instantiable {
     GeneratorDef* getDef() const {return def;}
     
     //This will create a blank module (will run typegen) if not cached
+    //Note, this is stored in the generator itself and is not in the namespace
     Module* getModule(Args args);
     
     //This will actually run the generator
@@ -78,7 +78,7 @@ class Generator : public Instantiable {
     //This will transfer memory management of def to this Generator
     void setDef(GeneratorDef* def) { assert(!this->def); this->def = def;}
     void setGeneratorDefFromFun(ModuleDefGenFun fun);
-    Params getGenparams() {return genparams;}
+    Params getGenParams() {return genparams;}
 };
 
 class Module : public Instantiable {
@@ -94,7 +94,10 @@ class Module : public Instantiable {
     static bool classof(const Instantiable* i) {return i->getKind()==IK_Module;}
     bool hasDef() const { return !!def; }
     ModuleDef* getDef() const { return def; } 
-    void setDef(ModuleDef* def) { this->def = def;}
+    
+    //This will validate def
+    void setDef(ModuleDef* def, bool validate=true);
+    
     ModuleDef* newModuleDef();
     
     string toString() const;

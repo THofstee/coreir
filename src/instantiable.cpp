@@ -27,8 +27,8 @@ Generator::Generator(Namespace* ns,string name,TypeGen* typegen, Params genparam
   //Verify that typegen params are a subset of genparams
   for (auto const &type_param : typegen->getParams()) {
     auto const &gen_param = genparams.find(type_param.first);
-    assert(gen_param != genparams.end() && "Param not found");
-    assert(gen_param->second == type_param.second && "Param type mismatch");
+    ASSERT(gen_param != genparams.end(),"Param not found: " + type_param.first);
+    ASSERT(gen_param->second == type_param.second,"Param type mismatch for " + type_param.first);
   }
 }
 
@@ -40,18 +40,9 @@ Generator::~Generator() {
   for (auto m : genCache) delete m.second;
 }
 
-void checkArgsAreParams(Args args, Params params) {
-  assert(args.size() == params.size() && "Args and params are not the same!");
-  for (auto const &param : params) {
-    auto const &arg = args.find(param.first);
-    assert(arg != args.end() && "Arg Not found");
-    assert(arg->second->getKind() == param.second && "Param type mismatch");
-  }
-}
 
 Module* Generator::getModule(Args args) {
   
-  //Check cache
   auto cached = genCache.find(args);
   if (cached != genCache.end() ) {
     return cached->second;
@@ -91,6 +82,22 @@ Module::~Module() {
   
   for (auto md : mdefList) delete md;
 }
+
+ModuleDef* Module::newModuleDef() {
+  
+  ModuleDef* md = new ModuleDef(this);
+  mdefList.push_back(md);
+  return md;
+}
+
+void Module::setDef(ModuleDef* def, bool validate) {
+  if (validate) {
+    if (def->validate()) {
+      cout << "Error Validating def" << endl;
+      this->getContext()->die();
+    }
+  }
+  this->def = def;}
 
 string Module::toString() const {
   return "Module: " + name + "\n  Type: " + type->toString() + "\n  Def? " + (hasDef() ? "Yes" : "No");
