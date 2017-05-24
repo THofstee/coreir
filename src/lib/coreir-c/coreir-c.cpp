@@ -341,11 +341,7 @@ extern "C" {
       int size = directed_instances.size();
       *num_instances = size;
       DirectedInstance** ptr_arr = module->getContext()->newDirectedInstancePtrArray(size);
-      int i = 0;
-      for (auto directed_instance : directed_instances) {
-          ptr_arr[i] = directed_instance;
-          i++;
-      }
+      memcpy(ptr_arr, inputs.data(), sizeof(DirectedConnection*)*size);
       return rcast<COREDirectedInstance**>(ptr_arr);
   }
 
@@ -390,11 +386,7 @@ extern "C" {
       int size = outputs.size();
       *num_connections = size;
       DirectedConnection** ptr_arr = instance->getContext()->newDirectedConnectionPtrArray(size);
-      int i = 0;
-      for (auto output : outputs) {
-          ptr_arr[i] = output;
-          i++;
-      }
+      memcpy(ptr_arr, outputs.data(), sizeof(DirectedConnection*)*size);
       return rcast<COREDirectedConnection**>(ptr_arr);
   }
 
