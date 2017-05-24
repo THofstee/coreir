@@ -327,11 +327,7 @@ extern "C" {
       int size = directed_connections.size();
       *num_connections = size;
       DirectedConnection** ptr_arr = module->getContext()->newDirectedConnectionPtrArray(size);
-      int i = 0;
-      for (auto directed_connection : directed_connections) {
-          ptr_arr[i] = directed_connection;
-          i++;
-      }
+      memcpy(ptr_arr, directed_connections.data(), sizeof(DirectedConnection*)*size);
       return rcast<COREDirectedConnection**>(ptr_arr);
   }
   
