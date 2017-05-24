@@ -77,8 +77,8 @@ extern void COREPrintErrors(COREContext* c);
 extern const char* CORENamespaceGetName(CORENamespace* n);
 
 // BEGIN : directedview
-extern const char** COREDirectedConnectionGetSrc(COREDirectedConnection* directed_connection);
-extern const char** COREDirectedConnectionGetSnk(COREDirectedConnection* directed_connection);
+extern const char** COREDirectedConnectionGetSrc(COREDirectedConnection* directed_connection, int* path_len);
+extern const char** COREDirectedConnectionGetSnk(COREDirectedConnection* directed_connection, int* path_len);
 
 extern COREDirectedModule* CORENewDirectedModule(COREModule* m);
 extern COREWireable* COREDirectedModuleSel(COREDirectedModule* directed_module, const char** path);

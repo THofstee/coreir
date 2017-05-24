@@ -369,13 +369,14 @@ extern "C" {
       DirectedConnections outputs = module->getOutputs();
       int size = outputs.size();
       *num_connections = size;
-      DirectedConnection** ptr_arr = module->getContext()->newDirectedConnectionPtrArray(size);
-      int i = 0;
-      for (auto output : outputs) {
-          ptr_arr[i] = output;
-          i++;
-      }
-      return rcast<COREDirectedConnection**>(ptr_arr);
+      return rcast<COREDirectedConnection**>(outputs.data());
+      // DirectedConnection** ptr_arr = module->getContext()->newDirectedConnectionPtrArray(size);
+      // int i = 0;
+      // for (auto output : outputs) {
+      //     ptr_arr[i] = output;
+      //     i++;
+      // }
+      // return rcast<COREDirectedConnection**>(ptr_arr);
   }
 
   COREDirectedConnection** COREDirectedInstanceGetInputs(COREDirectedInstance* directed_instance, int* num_connections) {

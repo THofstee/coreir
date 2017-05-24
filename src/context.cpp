@@ -188,7 +188,7 @@ DirectedInstance** Context::newDirectedInstancePtrArray(int size) {
     return arr;
 }
 
-Arg* Context::argInt(int i) { 
+Arg* Context::argInt(int i) {
   Arg* ga = new ArgInt(i); 
   argList.push_back(ga);
   return ga;
