@@ -5,7 +5,6 @@ namespace CoreIR {
 template <class T1, class T2>
 T1 rcast(T2 in) {
   return reinterpret_cast<T1>(in);
-
 }
 
 extern "C" {
@@ -369,14 +368,10 @@ extern "C" {
       DirectedConnections outputs = module->getOutputs();
       int size = outputs.size();
       *num_connections = size;
-      return rcast<COREDirectedConnection**>(outputs.data());
-      // DirectedConnection** ptr_arr = module->getContext()->newDirectedConnectionPtrArray(size);
-      // int i = 0;
-      // for (auto output : outputs) {
-      //     ptr_arr[i] = output;
-      //     i++;
-      // }
-      // return rcast<COREDirectedConnection**>(ptr_arr);
+      // return rcast<COREDirectedConnection**>(outputs.data());
+      DirectedConnection** ptr_arr = module->getContext()->newDirectedConnectionPtrArray(size);
+      memcpy(ptr_arr, outputs.data(), sizeof(DirectedConnection*)*size);
+      return rcast<COREDirectedConnection**>(ptr_arr);
   }
 
   COREDirectedConnection** COREDirectedInstanceGetInputs(COREDirectedInstance* directed_instance, int* num_connections) {
@@ -385,11 +380,7 @@ extern "C" {
       int size = inputs.size();
       *num_connections = size;
       DirectedConnection** ptr_arr = instance->getContext()->newDirectedConnectionPtrArray(size);
-      int i = 0;
-      for (auto input : inputs) {
-          ptr_arr[i] = input;
-          i++;
-      }
+      memcpy(ptr_arr, inputs.data(), sizeof(DirectedConnection*)*size);
       return rcast<COREDirectedConnection**>(ptr_arr);
   }
 
