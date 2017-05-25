@@ -289,11 +289,14 @@ extern "C" {
       Context* c = conn->getContext();
       int size = path.size();
       *path_len = size;
-      const char** arr = c->newConstStringArray(size);
+      // const char** arr = c->newConstStringArray(size);
+      char** arr = (char**)malloc(sizeof(char*)*size);
       for (int i = 0; i < size; i ++) {
-          arr[i] = path[i].c_str();
+	      arr[i] = (char*)malloc(path[i].length()+1);
+	      strcpy(arr[i], path[i].c_str());
+          // arr[i] = path[i].c_str();
       }
-      return arr;
+      return (const char**)arr;
   }
 
   const char** COREDirectedConnectionGetSnk(COREDirectedConnection* directed_connection, int* path_len) {
@@ -302,11 +305,14 @@ extern "C" {
       Context* c = conn->getContext();
       int size = path.size();
       *path_len = size;
-      const char** arr = c->newConstStringArray(size);
+      // const char** arr = c->newConstStringArray(size);
+      char** arr = (char**)malloc(sizeof(char*)*size);
       for (int i = 0; i < size; i ++) {
-          arr[i] = path[i].c_str();
+	      arr[i] = (char*)malloc(path[i].length()+1);
+	      strcpy(arr[i], path[i].c_str());
+          // arr[i] = path[i].c_str();
       }
-      return arr;
+      return (const char**)arr;
   }
 
   COREDirectedModule* CORENewDirectedModule(COREModule* module) {
@@ -337,7 +343,7 @@ extern "C" {
       int size = directed_instances.size();
       *num_instances = size;
       DirectedInstance** ptr_arr = module->getContext()->newDirectedInstancePtrArray(size);
-      memcpy(ptr_arr, inputs.data(), sizeof(DirectedConnection*)*size);
+      memcpy(ptr_arr, directed_instances.data(), sizeof(DirectedInstance*)*size);
       return rcast<COREDirectedInstance**>(ptr_arr);
   }
 

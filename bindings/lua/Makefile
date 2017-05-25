@@ -13,6 +13,9 @@ lua: lib
 debug: lib
 	strace env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit coreir.lua
 
+intercept:
+	gcc -fPIC -shared -I../../include/coreir-c intercept.c -o intercept.so -ldl -L $(COREIR_LIB_DIR) -lcoreir-c
+
 clean:
 	rm coreir-single.h
 	rm coreir-stdlib.h

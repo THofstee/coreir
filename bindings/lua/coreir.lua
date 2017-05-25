@@ -36,7 +36,8 @@ local function get_inst_ref_name(inst)
    return ffi.string(ffi.gc(coreir_lib.COREGetInstRefName(inst), ffi.C.free))
 end
 
-local test_ctx = ffi.gc(coreir_lib.CORENewContext(), coreir_lib.COREDeleteContext)
+-- local test_ctx = ffi.gc(coreir_lib.CORENewContext(), coreir_lib.COREDeleteContext)
+local test_ctx = coreir_lib.CORENewContext()
 local ns_global = coreir_lib.COREGetGlobal(test_ctx)
 
 -- local module_str = "_simple.json"
@@ -63,7 +64,45 @@ for i=0,num_insts[0]-1 do
    io.write(get_inst_ref_name(inst) .. '\n')
 end
 
-local num_in  = ffi.new("int[1]")
-local num_out = ffi.new("int[1]")
+local function get_inputs(module)
+   local directed_module = coreir_lib.COREModuleGetDirectedModule(module)
+   local num_inputs = ffi.new("int[1]")
+   local inputs_ptr = coreir_lib.COREDirectedModuleGetInputs(directed_module, num_inputs)
+   local inputs = {}
+   for i=1,num_inputs[0] do
+	  inputs[i] = ffi.new("COREDirectedConnection*", inputs_ptr[i])
+   end
+   -- inputs["len"] = num_inputs
+   -- return inputs
+   return inputs, num_inputs[0]
+end
+
+local function get_outputs(module)
+   local directed_module = coreir_lib.COREModuleGetDirectedModule(module)
+   local num_outputs = ffi.new("int[1]")
+   local outputs_ptr = coreir_lib.COREDirectedModuleGetOutputs(directed_module, num_outputs)
+   local outputs = {}
+   for i=1,num_outputs[0] do
+	  local src_len = ffi.new("int[1]")
+	  local src = coreir_lib.COREDirectedConnectionGetSrc(outputs_ptr[i], src_len)
+	  io.write('Src: ' .. src_len[0] .. '\n')
+	  outputs[i] = ffi.new("COREDirectedConnection*", outputs_ptr[i])
+   end
+   return outputs, num_outputs[0]
+end
+
+local inputs,num_inputs = get_inputs(test_gen)
+local outputs,num_outputs = get_outputs(test_gen)
+
+for i,v in ipairs(inputs) do
+   io.write(i .. 'e' .. '\n')
+end
+
+io.write("Inputs:  " .. num_inputs .. '\n')
+io.write("Outputs: " .. num_outputs .. '\n')
+
+local num_connections  = ffi.new("int[1]")
+local connections = coreir_lib.COREModuleDefGetConnections(test_gen_defs, num_connections)
+io.write(num_connections[0] .. '\n')
 
 return coreir
