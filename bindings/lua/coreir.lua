@@ -33,7 +33,7 @@ local coreir_lib = init()
 local coreir_stdlib = load_lib('stdlib')
 
 local function get_inst_ref_name(inst)
-   return ffi.string(ffi.gc(coreir_lib.COREGetInstRefName(inst), ffi.C.free))
+   return ffi.string(coreir_lib.COREGetInstRefName(inst))
 end
 
 -- local test_ctx = ffi.gc(coreir_lib.CORENewContext(), coreir_lib.COREDeleteContext)
@@ -66,10 +66,25 @@ local function get_inputs(module)
    local inputs_ptr = coreir_lib.COREDirectedModuleGetInputs(directed_module, num_inputs)
    local inputs = {}
    for i=1,num_inputs[0] do
+	  -- local src_len = ffi.new("int[1]")
+	  -- local src = coreir_lib.COREDirectedConnectionGetSrc(inputs_ptr[i], src_len)
+	  -- io.write('Src: ' .. src_len[0] .. '\n')
+	  -- for j=0,src_len[0]-1 do
+	  -- 	 io.write(ffi.string(src[j]))
+	  -- 	 if j ~= src_len[0]-1 then io.write('->') end
+	  -- end
+	  -- io.write('\n')
+	  -- local snk_len = ffi.new("int[1]")
+	  -- local snk = coreir_lib.COREDirectedConnectionGetSnk(inputs_ptr[i], snk_len)
+	  -- io.write('Snk: ' .. snk_len[0] .. '\n')
+	  -- for j=0,snk_len[0]-1 do
+	  -- 	 io.write(ffi.string(snk[j]))
+	  -- 	 if j ~= snk_len[0]-1 then io.write('->') end
+	  -- end
+	  -- io.write('\n')
+
 	  inputs[i] = ffi.new("COREDirectedConnection*", inputs_ptr[i])
    end
-   -- inputs["len"] = num_inputs
-   -- return inputs
    return inputs, num_inputs[0]
 end
 
@@ -79,9 +94,23 @@ local function get_outputs(module)
    local outputs_ptr = coreir_lib.COREDirectedModuleGetOutputs(directed_module, num_outputs)
    local outputs = {}
    for i=1,num_outputs[0] do
-	  -- local src_len = ffi.new("int[1]")
-	  -- local src = coreir_lib.COREDirectedConnectionGetSrc(outputs_ptr[i], src_len)
-	  -- io.write('Src: ' .. src_len[0] .. '\n')
+	  local src_len = ffi.new("int[1]")
+	  local src = coreir_lib.COREDirectedConnectionGetSrc(outputs_ptr[i], src_len)
+	  io.write('Src: ' .. src_len[0] .. '\n')
+	  for j=0,src_len[0]-1 do
+		 io.write(ffi.string(src[j]))
+		 if j ~= src_len[0]-1 then io.write('->') end
+	  end
+	  io.write('\n')
+	  local snk_len = ffi.new("int[1]")
+	  local snk = coreir_lib.COREDirectedConnectionGetSnk(outputs_ptr[i], snk_len)
+	  io.write('Snk: ' .. snk_len[0] .. '\n')
+	  for j=0,snk_len[0]-1 do
+		 io.write(ffi.string(snk[j]))
+		 if j ~= snk_len[0]-1 then io.write('->') end
+	  end
+	  io.write('\n')
+
 	  outputs[i] = ffi.new("COREDirectedConnection*", outputs_ptr[i])
    end
    return outputs, num_outputs[0]
@@ -99,6 +128,6 @@ io.write("Outputs: " .. num_outputs .. '\n')
 
 local num_connections  = ffi.new("int[1]")
 local connections = coreir_lib.COREModuleDefGetConnections(test_gen_defs, num_connections)
-io.write(num_connections[0] .. '\n')
+io.write("Connections: " .. num_connections[0] .. '\n')
 
 return coreir
