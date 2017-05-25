@@ -52,10 +52,6 @@ coreir_lib.COREPrintModule(test_gen)
 
 local test_gen_defs = coreir_lib.COREModuleGetDef(test_gen)
 
--- TODO: Remove
-ffi.cdef("const char* ICEPTGetInstRefName(COREInstance* iref);")
-local coreir_intercept = ffi.load('./' .. 'intercept.so')
-
 local num_insts = ffi.new("int[1]")
 local test_gen_insts = coreir_lib.COREModuleDefGetInstances(test_gen_defs, num_insts)
 
@@ -83,9 +79,9 @@ local function get_outputs(module)
    local outputs_ptr = coreir_lib.COREDirectedModuleGetOutputs(directed_module, num_outputs)
    local outputs = {}
    for i=1,num_outputs[0] do
-	  local src_len = ffi.new("int[1]")
-	  local src = coreir_lib.COREDirectedConnectionGetSrc(outputs_ptr[i], src_len)
-	  io.write('Src: ' .. src_len[0] .. '\n')
+	  -- local src_len = ffi.new("int[1]")
+	  -- local src = coreir_lib.COREDirectedConnectionGetSrc(outputs_ptr[i], src_len)
+	  -- io.write('Src: ' .. src_len[0] .. '\n')
 	  outputs[i] = ffi.new("COREDirectedConnection*", outputs_ptr[i])
    end
    return outputs, num_outputs[0]

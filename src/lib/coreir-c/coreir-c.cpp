@@ -61,8 +61,11 @@ extern "C" {
   
   //TODO change the name of this function
   const char* COREGetInstRefName(COREWireable* iref) {
-    string name = rcast<Instance*>(iref)->getModuleRef()->getName();
-    return name.c_str();
+	string name = rcast<Instance*>(iref)->getModuleRef()->getName();
+	size_t size = name.length()+1;
+	char* res = (char*)malloc(size);
+	memcpy(res, name.c_str(), size);
+	return res;
   }
 
   //TODO change the name to Arg
