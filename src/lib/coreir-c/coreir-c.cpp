@@ -174,6 +174,10 @@ extern "C" {
     return rcast<COREWireable*>(rcast<Connection*>(c)->second);
   }
 
+  COREType* COREWireableGetType(COREWireable* w) {
+	  return rcast<COREType*>(rcast<Wireable*>(w)->getType());
+  }
+
   COREWireable** COREWireableGetConnectedWireables(COREWireable* w, int* numWireables) {
     Wireable* wireable = rcast<Wireable*>(w);
     unordered_set<Wireable*> connections_set = wireable->getConnectedWireables();

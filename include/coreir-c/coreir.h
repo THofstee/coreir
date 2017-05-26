@@ -19,11 +19,9 @@ void* CORENewMap(COREContext* c, void* keys, void* values, uint len, COREMapKind
 extern COREContext* CORENewContext();
 extern void COREDeleteContext(COREContext*);
 
-
-extern COREModule* CORELoadModule(COREContext* c, char* filename, COREBool* err);
-
 //Errors:
 //Cannot open file for reading/writing
+extern COREModule* CORELoadModule(COREContext* c, char* filename, COREBool* err);
 extern void CORESaveModule(COREModule* module, char* filename, COREBool* err);
 extern CORENamespace* COREGetGlobal(COREContext* c);
 extern const char* COREGetInstRefName(COREWireable* iref);
@@ -60,13 +58,14 @@ extern COREModule* COREModuleDefGetModule(COREModuleDef* m);
 extern const char** COREWireableGetSelectPath(COREWireable* w, int* num_selects);
 extern void COREPrintErrors(COREContext* c);
 extern const char* CORENamespaceGetName(CORENamespace* n);
+extern COREType* COREWireableGetType(COREWireable* w);
 
 // BEGIN : directedview
 extern const char** COREDirectedConnectionGetSrc(COREDirectedConnection* directed_connection, int* path_len);
 extern const char** COREDirectedConnectionGetSnk(COREDirectedConnection* directed_connection, int* path_len);
 
 extern COREDirectedModule* CORENewDirectedModule(COREModule* m);
-extern COREWireable* COREDirectedModuleSel(COREDirectedModule* directed_module, const char** path);
+extern COREWireable* COREDirectedModuleSel(COREDirectedModule* directed_module, const char** path, int path_len);
 extern COREDirectedConnection** COREDirectedModuleGetConnections(COREDirectedModule* directed_module, int* num_connections);
 extern COREDirectedInstance** COREDirectedModuleGetInstances(COREDirectedModule* directed_module, int* num_instances);
 extern COREDirectedConnection** COREDirectedModuleGetInputs(COREDirectedModule* directed_module, int* num_connections);
