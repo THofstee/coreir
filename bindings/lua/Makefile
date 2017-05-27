@@ -8,10 +8,10 @@ lib:
 	gcc -E -I../../include/ ../../include/coreir-lib/stdlib.h | sed '/^#/ d' > coreir-stdlib.h
 
 lua: lib
-	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit coreir.lua
+	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit test.lua
 
 debug: lib
-	strace env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit coreir.lua
+	strace env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit test.lua
 
 intercept:
 	gcc -fPIC -shared -I../../include/coreir-c intercept.c -o intercept.so -ldl -L $(COREIR_LIB_DIR) -lcoreir-c
