@@ -1,6 +1,7 @@
 local coreir = require 'coreir'
 
 -- Load the module from a file
+-- local stdlib = coreir.load_lib('stdlib')
 local test_gen = coreir.load_module("_add4.json")
 -- coreir.print_module(test_gen)
 

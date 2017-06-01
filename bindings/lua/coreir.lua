@@ -43,9 +43,6 @@ local function load_lib(lib)
 end
 coreir.load_lib = load_lib
 
-init()
-coreir.stdlib = load_lib('stdlib')
-
 ---
 
 local function load_module(filename)
@@ -208,5 +205,8 @@ end
 -- end
 -- coreir.get_inst_inputs  = get_inst_io("inputs")
 -- -- coreir.get_inst_outputs = function(i) return {},0 end -- get_inst_io("outputs")
+
+init()
+coreir.stdlib = load_lib('stdlib')
 
 return coreir
