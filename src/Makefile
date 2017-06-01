@@ -27,11 +27,11 @@ clean:
 	rm -rf build/*
 
 build/%.so: $(OBJS)
-	$(CXX) -shared -o $@ $^
+	$(CXX) $(CXXFLAGS) -shared -o $@ $^
 	cp $@ ../lib/lib$*.so
 
 build/%.dylib: $(OBJS)
-	$(CXX) -install_name "@rpath/lib$*.dylib" -dynamiclib -o $@ $^
+	$(CXX) $(CXXFLAGS) -install_name "@rpath/lib$*.dylib" -dynamiclib -o $@ $^
 	cp $@ ../lib/lib$*.dylib
 
 build/%.o: %.cpp $(DEPS)

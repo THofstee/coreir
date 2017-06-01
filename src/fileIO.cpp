@@ -22,7 +22,10 @@ Module* getModSymbol(Context* c, string nsname, string iname);
 Generator* getGenSymbol(Context* c, string nsname, string iname);
 
 Module* loadModule(Context* c, string filename, bool* err) {
-  std::fstream file;
+	// *err = false;
+	// return nullptr;
+
+	std::fstream file;
   file.open(filename);
   if (!file.is_open()) {
     *err =true;
@@ -177,7 +180,7 @@ Module* loadModule(Context* c, string filename, bool* err) {
             if (jinst.count("configargs")) {
               configargs = json2Args(c,genRef->getConfigParams(),jinst.at("configargs"));
             }
-            mdef->addInstance(instname,genRef,genargs,configargs);
+            mdef->addInstance(instname,genRef,genargs,configargs);//HERE #6
           }
           else {
             assert(0);

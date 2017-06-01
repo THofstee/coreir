@@ -30,7 +30,7 @@ Namespace* CoreIRLoadLibrary_stdlib(Context* c) {
     "binop",
     widthparam,
     [](Context* c, Args args) {
-      uint width = args.at("width")->get<ArgInt>();
+	    uint width = 32; //args.at("width")->get<ArgInt>();
       return c->Record({
         {"in",c->BitIn()->Arr(width)->Arr(2)},
         {"out",c->Bit()->Arr(width)}

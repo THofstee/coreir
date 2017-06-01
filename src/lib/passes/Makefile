@@ -34,11 +34,11 @@ clean:
 	rm -rf build/*
 
 build/passes.dylib: $(OBJS)
-	$(CXX) -install_name "@rpath/libcoreir-passes.dylib" -dynamiclib $(LPATH) -lcoreir -o $@ $^
+	$(CXX) $(CXXFLAGS) -install_name "@rpath/libcoreir-passes.dylib" -dynamiclib $(LPATH) -lcoreir -o $@ $^
 	cp $@ $(HOME)/lib/libcoreir-passes.dylib
 
 build/passes.so: $(OBJS)
-	$(CXX) -shared $(LPATH) -lcoreir -o $@ $^
+	$(CXX) $(CXXFLAGS) -shared $(LPATH) -lcoreir -o $@ $^
 	cp $@ $(HOME)/lib/libcoreir-passes.so
 
 build/%.o: %.cpp $(DEPS)

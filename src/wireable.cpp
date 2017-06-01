@@ -56,7 +56,7 @@ string Wireable::wireableKind2Str(WireableKind wb) {
 Instance::Instance(ModuleDef* context, string instname, Module* moduleRef, Args configargs) : Wireable(WK_Instance,context,nullptr), instname(instname), moduleRef(moduleRef), configargs(configargs), isgen(false) {
   ASSERT(moduleRef,"Module is null, in inst: " + this->getInstname());
   //Check if configargs is the same as expected by ModuleRef
- checkArgsAreParams(configargs,moduleRef->getConfigParams());
+  checkArgsAreParams(configargs,moduleRef->getConfigParams());
   
   //TODO checkif instname is unique
   this->type = moduleRef->getType();
@@ -64,11 +64,10 @@ Instance::Instance(ModuleDef* context, string instname, Module* moduleRef, Args 
 
 Instance::Instance(ModuleDef* context, string instname, Generator* generatorRef, Args genargs, Args configargs) : Wireable(WK_Instance,context,nullptr), instname(instname), configargs(configargs), isgen(true), generatorRef(generatorRef), genargs(genargs) {
   ASSERT(generatorRef,"Generator is null, in inst: " + this->getInstname());
-  this->moduleRef = generatorRef->getModule(genargs);
+  this->moduleRef = generatorRef->getModule(genargs);//HERE #4
   this->type = moduleRef->getType();
   checkArgsAreParams(configargs,moduleRef->getConfigParams());
   checkArgsAreParams(genargs,generatorRef->getGenParams());
-  
 }
 
 string Interface::toString() const{

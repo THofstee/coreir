@@ -49,7 +49,7 @@ Module* Generator::getModule(Args args) {
   }
   
   checkArgsAreParams(args,genparams);
-  Type* type = typegen->getType(args);
+  Type* type = typegen->getType(args);//HERE #3
   Module* m = new Module(ns,name + getContext()->getUnique(),type,configparams);
   genCache[args] = m;
   return m;

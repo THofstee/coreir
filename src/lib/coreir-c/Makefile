@@ -34,11 +34,11 @@ clean:
 	rm -rf build/*
 
 build/%.so: $(OBJS)
-	$(CXX) -shared $(LPATH) -o $@ $^ -lcoreir
+	$(CXX) $(CXXFLAGS) -shared $(LPATH) -o $@ $^ -lcoreir
 	cp $@ $(HOME)/lib/lib$*.so
 
 build/%.dylib: $(OBJS)
-	$(CXX) -install_name "@rpath/lib$*.dylib" -dynamiclib $(LPATH) -lcoreir -o $@ $^
+	$(CXX) $(CXXFLAGS) -install_name "@rpath/lib$*.dylib" -dynamiclib $(LPATH) -lcoreir -o $@ $^
 	cp $@ $(HOME)/lib/lib$*.dylib
 
 build/%.o: %.cpp $(DEPS)

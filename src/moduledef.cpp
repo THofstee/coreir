@@ -65,7 +65,7 @@ Wireable* ModuleDef::sel(SelectPath path) {
 Instance* ModuleDef::addInstance(string instname,Generator* gen, Args genargs,Args config) {
   assert(instances.count(instname)==0);
   
-  Instance* inst = new Instance(this,instname,gen,genargs,config);
+  Instance* inst = new Instance(this,instname,gen,genargs,config);//HERE #5
   instances[instname] = inst;
   
   return inst;
