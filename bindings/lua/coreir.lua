@@ -10,8 +10,8 @@ local function first_to_upper(str)
 end
 
 local function read_file(file)
-   local f = io.open(file, "rb")
-   local content = f:read("*all")
+   local f = assert(io.open(file), "Could not open " .. file .. " for reading")
+   local content = f:read("*a")
    f:close()
    return content
 end
