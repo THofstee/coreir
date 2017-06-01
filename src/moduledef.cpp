@@ -82,7 +82,7 @@ Wireable* ModuleDef::sel(SelectPath path) {
 Instance* ModuleDef::addInstance(string instname,Generator* gen, Args genargs,Args config) {
   assert(instances.count(instname)==0);
   
-  Instance* inst = new Instance(this,instname,gen,genargs,config);//HERE #5
+  Instance* inst = new Instance(this,instname,gen,genargs,config);
   instances[instname] = inst;
 
   //Add to instanceMap

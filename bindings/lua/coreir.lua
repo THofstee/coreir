@@ -39,9 +39,13 @@ local function load_lib(lib)
    -- coreir[lib] = ll["CORELoadLibrary_" .. lib](coreir.ctx)
 
    -- For now, just return it.
+   coreir["__library" .. lib] = ll
    return ll["CORELoadLibrary_" .. lib](coreir.ctx)
 end
 coreir.load_lib = load_lib
+
+init()
+coreir.stdlib = load_lib('stdlib')
 
 ---
 
@@ -206,7 +210,7 @@ end
 -- coreir.get_inst_inputs  = get_inst_io("inputs")
 -- -- coreir.get_inst_outputs = function(i) return {},0 end -- get_inst_io("outputs")
 
-init()
-coreir.stdlib = load_lib('stdlib')
+-- init()
+-- coreir.stdlib = load_lib('stdlib')
 
 return coreir

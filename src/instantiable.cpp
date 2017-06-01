@@ -53,7 +53,7 @@ Module* Generator::getModule(Args args) {
   }
   
   checkArgsAreParams(args,genparams);
-  Type* type = typegen->getType(args);//HERE #3
+  Type* type = typegen->getType(args);
   Module* m = new Module(ns,name + getContext()->getUnique(),type,configparams);
   m->setLinkageKind(Instantiable::LK_Generated);
   genCache[args] = m;

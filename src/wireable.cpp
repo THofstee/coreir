@@ -72,7 +72,7 @@ Instance::Instance(ModuleDef* context, string instname, Module* moduleRef, Args 
 
 Instance::Instance(ModuleDef* context, string instname, Generator* generatorRef, Args genargs, Args configargs) : Wireable(WK_Instance,context,nullptr), instname(instname), configargs(configargs), isgen(true), generatorRef(generatorRef), genargs(genargs) {
   ASSERT(generatorRef,"Generator is null, in inst: " + this->getInstname());
-  this->moduleRef = generatorRef->getModule(genargs);//HERE #4
+  this->moduleRef = generatorRef->getModule(genargs);
   this->type = moduleRef->getType();
   checkArgsAreParams(configargs,moduleRef->getConfigParams());
   checkArgsAreParams(genargs,generatorRef->getGenParams());

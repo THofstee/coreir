@@ -48,8 +48,8 @@ intercept:
 	gcc -fPIC -shared -I../../include/coreir-c intercept.c -o intercept.so -ldl -L $(COREIR_LIB_DIR) -lcoreir-c
 
 clean:
-	rm coreir-single.h
-	rm coreir-stdlib.h
+	rm -f coreir-single.h
+	rm -f coreir-stdlib.h
 
 clean-all: clean
 	make -C ../../ clean

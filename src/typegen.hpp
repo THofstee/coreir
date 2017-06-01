@@ -30,7 +30,7 @@ class TypeGenFromFun : public TypeGen {
   public:
     TypeGenFromFun(Namespace* ns, string name, Params params, TypeGenFun fun, bool flipped=false) : TypeGen(ns,name,params,flipped), fun(fun) {}
     Type* createType(Context* c, Args args) {
-	    return fun(c,args);//HERE #1
+	    return fun(c,args);
     }
 };
 
