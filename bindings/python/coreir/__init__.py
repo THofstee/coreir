@@ -119,6 +119,9 @@ libcoreir_c.COREWireableSelect.restype = COREWireable_p
 libcoreir_c.COREWireableGetSelectPath.argtypes = [COREWireable_p, ct.POINTER(ct.c_int)]
 libcoreir_c.COREWireableGetSelectPath.restype = ct.POINTER(ct.c_char_p)
 
+libcoreir_c.COREWireableGetType.argtypes = [COREWireable_p]
+libcoreir_c.COREWireableGetType.restype = COREType_p
+
 libcoreir_c.COREModuleDefSelect.argtypes = [COREModuleDef_p, ct.c_char_p]
 libcoreir_c.COREModuleDefSelect.restype = COREWireable_p
 
@@ -157,3 +160,10 @@ libcoreir_c.COREDirectedInstanceGetInputs.restype = ct.POINTER(COREDirectedConne
 
 libcoreir_c.COREDirectedInstanceGetOutputs.argtypes = [COREDirectedInstance_p, ct.POINTER(ct.c_int)]
 libcoreir_c.COREDirectedInstanceGetOutputs.restype = ct.POINTER(COREDirectedConnection_p)
+
+libcoreir_c.COREArrayTypeGetLen.argtypes = [COREType_p]
+libcoreir_c.COREArrayTypeGetLen.restype = ct.c_uint
+
+libcoreir_c.COREGetTypeKind.argtypes = [COREType_p]
+libcoreir_c.COREGetTypeKind.restype = ct.c_int # CORETypeKind is an enum
+
