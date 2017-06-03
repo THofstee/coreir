@@ -68,149 +68,124 @@ local function module_get_def(m)
 end
 coreir.module_get_def = module_get_def
 
--- local function module_def_get_instances(module_def)
---    local num_insts = ffi.new("unsigned int[1]")
---    local instances = coreir.lib.COREModuleDefGetInstances(module_def, num_insts)
---    return instances, num_insts[0]
--- end
--- coreir.module_def_get_instances = module_def_get_instances
-
--- local function get_inst_ref_name(inst)
---    return ffi.string(coreir.lib.COREGetInstRefName(inst))
--- end
--- coreir.get_inst_ref_name = get_inst_ref_name
-
--- local function get_io(direction)
---    return function(module)
--- 	  direction = first_to_upper(direction)
--- 	  local directed_module = coreir.lib.COREModuleGetDirectedModule(module)
--- 	  local num_io = ffi.new("int[1]")
--- 	  local io_ptr = coreir.lib["COREDirectedModuleGet" .. direction](directed_module, num_io)
--- 	  local ios = {}
--- 	  io.write(direction .. num_io[0] .. '\n')
--- 	  for i=0,num_io[0]-1 do
--- 		 local src_len = ffi.new("int[1]")
--- 		 local src = coreir.lib.COREDirectedConnectionGetSrc(io_ptr[i], src_len)
--- 		 for j=0,src_len[0]-1 do
--- 			io.write(ffi.string(src[j]))
--- 			if j ~= src_len[0]-1 then io.write('->') end
--- 		 end
--- 		 io.write(' => ')
--- 		 local snk_len = ffi.new("int[1]")
--- 		 local snk = coreir.lib.COREDirectedConnectionGetSnk(io_ptr[i], snk_len)
--- 		 for j=0,snk_len[0]-1 do
--- 			io.write(ffi.string(snk[j]))
--- 			if j ~= snk_len[0]-1 then io.write('->') end
--- 		 end
--- 		 io.write('\n')
-
--- 		 local derp = coreir.lib.COREDirectedModuleSel(directed_module, src, src_len[0])
--- 		 io.write("Src ")
--- 		 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(derp))
--- 		 local herp = coreir.lib.COREDirectedModuleSel(directed_module, snk, snk_len[0])
--- 		 io.write("Snk ")
--- 		 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(herp))
-
--- 		 ios[i] = io_ptr[i]
--- 		 -- ios[i] = ffi.new("COREDirectedConnection*", io_ptr[i])
--- 	  end
--- 	  return ios, num_io[0]
---    end
--- end
--- coreir.get_inputs  = get_io("inputs")
--- coreir.get_outputs = get_io("outputs")
-
-function coreir.a()
-   return 0
+-- Seems like it returns the same objects if you call it multiple times
+local function module_def_get_instances(module_def)
+   local num_insts = ffi.new("unsigned int[1]")
+   local instances = coreir.lib.COREModuleDefGetInstances(module_def, num_insts)
+   return instances, num_insts[0]
 end
--- coreir.get_inputs = function(m) return {}, 0 end
-   -- local directed_module = coreir.lib.COREModuleGetDirectedModule(module)
-   -- local num_io = ffi.new("int[1]")
-   -- local io_ptr = coreir.libCOREDirectedModuleGetInputs(directed_module, num_io)
-   -- local ios = {}
-   -- io.write(direction .. num_io[0] .. '\n')
-   -- for i=0,num_io[0]-1 do
-   -- 	  local src_len = ffi.new("int[1]")
-   -- 	  local src = coreir.lib.COREDirectedConnectionGetSrc(io_ptr[i], src_len)
-   -- 	  for j=0,src_len[0]-1 do
-   -- 		 io.write(ffi.string(src[j]))
-   -- 		 if j ~= src_len[0]-1 then io.write('->') end
-   -- 	  end
-   -- 	  io.write(' => ')
-   -- 	  local snk_len = ffi.new("int[1]")
-   -- 	  local snk = coreir.lib.COREDirectedConnectionGetSnk(io_ptr[i], snk_len)
-   -- 	  for j=0,snk_len[0]-1 do
-   -- 		 io.write(ffi.string(snk[j]))
-   -- 		 if j ~= snk_len[0]-1 then io.write('->') end
-   -- 	  end
-   -- 	  io.write('\n')
+coreir.module_def_get_instances = module_def_get_instances
 
-   -- 	  local derp = coreir.lib.COREDirectedModuleSel(directed_module, src, src_len[0])
-   -- 	  io.write("Src ")
-   -- 	  coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(derp))
-   -- 	  local herp = coreir.lib.COREDirectedModuleSel(directed_module, snk, snk_len[0])
-   -- 	  io.write("Snk ")
-   -- 	  coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(herp))
+local function get_inst_ref_name(inst)
+   return ffi.string(coreir.lib.COREGetInstRefName(inst))
+end
+coreir.get_inst_ref_name = get_inst_ref_name
 
-   -- 	  ios[i] = io_ptr[i]
-   -- 	  -- ios[i] = ffi.new("COREDirectedConnection*", io_ptr[i])
-   -- end
-   -- return ios, num_io[0]
-   -- return {},0
--- end
+local function get_io(direction)
+   return function(module)
+	  direction = first_to_upper(direction)
+	  local directed_module = coreir.lib.COREModuleGetDirectedModule(module)
+	  local num_io = ffi.new("int[1]")
+	  local io_ptr = coreir.lib["COREDirectedModuleGet" .. direction](directed_module, num_io)
+	  local ios = {}
+	  io.write(direction .. num_io[0] .. '\n')
+	  for i=0,num_io[0]-1 do
+		 local src_len = ffi.new("int[1]")
+		 local src = coreir.lib.COREDirectedConnectionGetSrc(io_ptr[i], src_len)
+		 for j=0,src_len[0]-1 do
+			io.write(ffi.string(src[j]))
+			if j ~= src_len[0]-1 then io.write('->') end
+		 end
+		 io.write(' => ')
+		 local snk_len = ffi.new("int[1]")
+		 local snk = coreir.lib.COREDirectedConnectionGetSnk(io_ptr[i], snk_len)
+		 for j=0,snk_len[0]-1 do
+			io.write(ffi.string(snk[j]))
+			if j ~= snk_len[0]-1 then io.write('->') end
+		 end
+		 io.write('\n')
 
--- local function get_inst(module)
---    local directed_module = coreir.lib.COREModuleGetDirectedModule(module)
---    local num_inst = ffi.new("int[1]")
---    local inst_ptr = coreir.lib.COREDirectedModuleGetInstances(directed_module, num_inst)
---    local inst = {}
---    for i=0,num_inst[0]-1 do		 
---    	  inst[i] = inst_ptr[i]
---    end
---    return inst, num_inst[0]-1
--- end
--- coreir.get_inst = get_inst
+		 local derp = coreir.lib.COREDirectedModuleSel(directed_module, src, src_len[0])
+		 io.write("Src ")
+		 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(derp))
+		 local herp = coreir.lib.COREDirectedModuleSel(directed_module, snk, snk_len[0])
+		 io.write("Snk ")
+		 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(herp))
 
--- local function get_inst_io(direction)
---    return function(instance)
--- 	  direction = first_to_upper(direction)
--- 	  local num_io = ffi.new("int[1]")
--- 	  local io_ptr = coreir.lib["COREDirectedInstanceGet" .. direction](instance, num_io)
--- 	  local ios = {}
--- 	  -- io.write(direction .. num_io[0] .. '\n')
--- 	  -- for i=0,num_io[0]-1 do
--- 	  -- 	 local src_len = ffi.new("int[1]")
--- 	  -- 	 local src = coreir.lib.COREDirectedConnectionGetSrc(io_ptr[i], src_len)
--- 	  -- 	 for j=0,src_len[0]-1 do
--- 	  -- 		io.write(ffi.string(src[j]))
--- 	  -- 		if j ~= src_len[0]-1 then io.write('->') end
--- 	  -- 	 end
--- 	  -- 	 io.write(' => ')
--- 	  -- 	 local snk_len = ffi.new("int[1]")
--- 	  -- 	 local snk = coreir.lib.COREDirectedConnectionGetSnk(io_ptr[i], snk_len)
--- 	  -- 	 for j=0,snk_len[0]-1 do
--- 	  -- 		io.write(ffi.string(snk[j]))
--- 	  -- 		if j ~= snk_len[0]-1 then io.write('->') end
--- 	  -- 	 end
--- 	  -- 	 io.write('\n')
+		 ios[i] = io_ptr[i]
+		 -- ios[i] = ffi.new("COREDirectedConnection*", io_ptr[i])
+	  end
+	  return ios, num_io[0]
+   end
+end
+coreir.get_inputs  = get_io("inputs")
+coreir.get_outputs = get_io("outputs")
 
--- 	  -- 	 local derp = coreir.lib.COREDirectedModuleSel(directed_module, src, src_len[0])
--- 	  -- 	 io.write("Src ")
--- 	  -- 	 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(derp))
--- 	  -- 	 local herp = coreir.lib.COREDirectedModuleSel(directed_module, snk, snk_len[0])
--- 	  -- 	 io.write("Snk ")
--- 	  -- 	 coreir.lib.COREPrintType(coreir.lib.COREWireableGetType(herp))
+local function get_dir_inst(module)
+   local directed_module = coreir.lib.COREModuleGetDirectedModule(module)
+   local num_inst = ffi.new("int[1]")
+   local inst_ptr = coreir.lib.COREDirectedModuleGetInstances(directed_module, num_inst)
+   local inst = {}
+   for i=0,num_inst[0]-1 do		 
+   	  inst[i] = inst_ptr[i]
+   end
+   return inst, num_inst[0]
+end
+coreir.get_dir_inst = get_dir_inst
 
--- 	  -- 	 ios[i] = io_ptr[i]
--- 	  -- end
--- 	  -- return ios, num_io[0]
--- 	  return {},0
---    end
--- end
--- coreir.get_inst_inputs  = get_inst_io("inputs")
--- -- coreir.get_inst_outputs = function(i) return {},0 end -- get_inst_io("outputs")
+local function get_inst_io(direction)
+   return function(instance)
+	  direction = first_to_upper(direction)
+	  local num_io = ffi.new("int[1]")
+	  local io_ptr = coreir.lib["COREDirectedInstanceGet" .. direction](instance, num_io)
+	  local ios = {}
+	  io.write(direction .. ' ' .. num_io[0] .. '\n')
+	  for i=0,num_io[0]-1 do
+	  	 local src_len = ffi.new("int[1]")
+	  	 local src = coreir.lib.COREDirectedConnectionGetSrc(io_ptr[i], src_len)
+	  	 for j=0,src_len[0]-1 do
+	  		io.write(ffi.string(src[j]))
+	  		if j ~= src_len[0]-1 then io.write('->') end
+	  	 end
+	  	 io.write(' => ')
+	  	 local snk_len = ffi.new("int[1]")
+	  	 local snk = coreir.lib.COREDirectedConnectionGetSnk(io_ptr[i], snk_len)
+	  	 for j=0,snk_len[0]-1 do
+	  		io.write(ffi.string(snk[j]))
+	  		if j ~= snk_len[0]-1 then io.write('->') end
+	  	 end
+	  	 io.write('\n')
 
--- init()
--- coreir.stdlib = load_lib('stdlib')
+	  	 ios[i] = io_ptr[i]
+	  end
+	  return ios, num_io[0]
+   end
+end
+coreir.get_inst_inputs  = get_inst_io("inputs")
+coreir.get_inst_outputs = get_inst_io("outputs")
+
+local function parse_type(t)
+   assert(type(t) == "cdata", "parse_type requires a COREType* as input")
+   local t_kind = coreir.lib.COREGetTypeKind(t)
+
+   local parsed_type = {}
+   if     t_kind == ffi.new("CORETypeKind", "COREBitTypeKind") then
+	  parsed_type.size = 1
+	  parsed_type.type = "bit_out"
+   elseif t_kind == ffi.new("CORETypeKind", "COREBitInTypeKind") then
+	  parsed_type.size = 1
+	  parsed_type.type = "bit_in"
+   elseif t_kind == ffi.new("CORETypeKind", "COREArrayTypeKind") then
+	  parsed_type.size = coreir.lib.COREArrayTypeGetLen(t)
+	  parsed_type.type = parse_type(coreir.lib.COREArrayTypeGetElemType(t))
+   elseif t_kind == ffi.new("CORETypeKind", "CORERecordTypeKind") then
+   elseif t_kind == ffi.new("CORETypeKind", "CORENamedTypeKind") then
+   elseif t_kind == ffi.new("CORETypeKind", "COREAnyTypeKind") then
+   else   assert("Invalid Type")
+   end
+
+   return parsed_type
+end
+coreir.parse_type = parse_type
 
 return coreir

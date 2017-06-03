@@ -198,11 +198,7 @@ extern "C" {
     return rcast<COREWireable*>(rcast<Wireable*>(w)->sel(string(sel)));
   }
 
-  COREType* COREWireableGetType(COREWireable* wireable) {
-    return rcast<COREType*>(rcast<Wireable*>(wireable)->getType());
-  }
-
-  COREWireable* COREModuleDefSelect(COREModuleDef* m, char* name) {
+	COREWireable* COREModuleDefSelect(COREModuleDef* m, char* name) {
     return rcast<COREWireable*>(rcast<ModuleDef*>(m)->sel(string(name)));
   }
 
