@@ -8,6 +8,7 @@ local header_path = './'
 local lib_path = '../../lib/'
 
 --- Makes the first character in a string uppercase.
+-- @lfunction first_to_upper
 -- @tparam string str input
 -- @treturn string the new string
 local function first_to_upper(str)
@@ -16,6 +17,7 @@ end
 
 --- Return the whole contents of a file as a string.
 -- The file is assumed to not be in binary format.
+-- @lfunction read_file
 -- @tparam string file path to the file
 -- @treturn string contents of file
 local function read_file(file)
@@ -25,10 +27,11 @@ local function read_file(file)
    return content
 end
 
---- Convert a cdata array into a lua array.
+--- Convert a cdata array into a (0-based) lua array.
+-- @lfunction to_lua_arr
 -- @tparam cdata ptr pointer to C array
--- @tparam[opt] function(cdata) fun optional function to transform cdata array
 -- @tparam int num_elems length of array
+-- @tparam[opt] function(cdata) fun transformation to apply on cdata elements
 -- @return a lua array containing the data from ptr
 local function to_lua_arr(ptr, num_elems, fun)
    local arr = {}
@@ -60,6 +63,7 @@ coreir.load_lib = load_lib
 -- This function is called internally to initialize the coreir module by
 -- loading the libcoreir-c shared library, creating a context, and a
 -- global namespace. This function also loads coreir-stdlib.
+-- @lfunction init
 local function init()
    ffi.cdef(read_file(header_path .. 'coreir-single.h'))
    coreir.lib = ffi.load(lib_path .. 'libcoreir-c.so')
@@ -125,6 +129,13 @@ local function get_inst_ref_name(inst)
 end
 coreir.get_inst_ref_name = get_inst_ref_name
 
+--- Makes a function to get specific i/o from a module.
+-- @lfunction get_io
+-- @tparam string _direction one of {"inputs","outputs","connections"}
+-- @treturn function(module) function that accepts a module and returns what was specified by the string
+-- @see get_inputs
+-- @see get_outputs
+-- @see get_connections
 local function get_io(_direction)
    return function(_module)
 	  local direction = first_to_upper(_direction)
@@ -140,10 +151,24 @@ end
 -- @function get_inputs
 -- @tparam module m
 -- @treturn {directed_connection,...},int array of directed_connections and length
-coreir.get_inputs  = get_io("inputs")
+coreir.get_inputs = get_io("inputs")
+
+--- Gets the outputs from a module.
+-- @function get_outputs
+-- @tparam module m
+-- @treturn {directed_connection,...},int array of directed_connections and length
 coreir.get_outputs = get_io("outputs")
+
+--- Gets the connections of a module.
+-- @function get_connections
+-- @tparam module m
+-- @treturn {directed_connection,...},int array of directed_connections and length
 coreir.get_connections = get_io("connections")
 
+--- Gets the directed instances of a module.
+-- @function get_dir_inst
+-- @tparam module m
+-- @treturn {directed_instance,...},int array of directed_instances and length
 local function get_dir_inst(_module)
    local directed_module = coreir.lib.COREModuleGetDirectedModule(_module)
    local num_inst = ffi.new("int[1]")
@@ -153,6 +178,13 @@ local function get_dir_inst(_module)
 end
 coreir.get_dir_inst = get_dir_inst
 
+--- Makes a function to get specific i/o from an instance.
+-- @lfunction get_inst_io
+-- @tparam string direction one of {"inputs","outputs"}
+-- @treturn function(directed_instance) the requested function
+-- @see get_io
+-- @see get_inst_inputs
+-- @see get_inst_outputs
 local function get_inst_io(_direction)
    return function(_instance)
 	  local direction = first_to_upper(_direction)
@@ -162,9 +194,23 @@ local function get_inst_io(_direction)
 	  return to_lua_arr(io_ptr,num_io[0]), num_io[0]
    end
 end
-coreir.get_inst_inputs  = get_inst_io("inputs")
+
+--- Gets the inputs of a directed_instance.
+-- @function get_inst_inputs
+-- @tparam directed_instance inst
+-- @treturn {directed_connection,...},int array of directed_connections and length
+coreir.get_inst_inputs = get_inst_io("inputs")
+
+--- Gets the outputs of a directed_instance.
+-- @function get_inst_outputs
+-- @tparam directed_instance inst
+-- @treturn {directed_connection,...},int array of directed_connections and length
 coreir.get_inst_outputs = get_inst_io("outputs")
 
+--- Parses a COREType* into a Lua table.
+-- @function parse_type
+-- @tparam COREType* t
+-- @return Lua table describing the type.
 local function parse_type(t)
    assert(type(t) == "cdata", "parse_type requires a COREType* as input")
    local t_kind = coreir.lib.COREGetTypeKind(t)
@@ -192,6 +238,10 @@ local function parse_type(t)
 end
 coreir.parse_type = parse_type
 
+--- Returns the direction of a COREType*.
+-- @function type_direction
+-- @tparam COREType* t
+-- @treturn string direction of the type
 local function type_direction(t)
    assert(type(t) == "cdata", "type_direction requires a COREType* as input")
    local t_kind = coreir.lib.COREGetTypeKind(t)
@@ -214,17 +264,25 @@ local function type_direction(t)
 end
 coreir.type_direction = type_direction
 
+--- Gets the sink of a directed_connection.
+-- @function get_snk
+-- @tparam directed_connection d_c
+-- @treturn {string,...},int selection path of the sink and length of path.
 local function get_snk(d_c)
    local p_len = ffi.new("int[1]")
    local p_ptr = coreir.lib.COREDirectedConnectionGetSnk(d_c, p_len)
-   return p_ptr,p_len[0]
+   return to_lua_arr(p_ptr,p_len[0],ffi.string),p_len[0]
 end
 coreir.get_snk = get_snk
 
+--- Gets the source of a directed_connection.
+-- @function get_src
+-- @tparam directed_connection d_c
+-- @treturn {string,...},int selection path of the source and length of path.
 local function get_src(d_c)
    local p_len = ffi.new("int[1]")
    local p_ptr = coreir.lib.COREDirectedConnectionGetSrc(d_c, p_len)
-   return p_ptr,p_len[0]
+   return to_lua_arr(p_ptr,p_len[0],ffi.string),p_len[0]
 end
 coreir.get_src = get_src
 
@@ -267,6 +325,10 @@ local function module_sel(m, path)
 end
 coreir.module_sel = module_sel
 
+--- Parses a module into a Lua table.
+-- @function parse_module
+-- @tparam module m
+-- @return lua table describing the module
 local function parse_module(m)
    local directed_module = coreir.lib.COREModuleGetDirectedModule(m)
 
@@ -311,31 +373,27 @@ local function parse_module(m)
 	  -- Parse module inputs
    	  local inputs,num_in = coreir.get_inputs(m)
    	  for i,input in next,inputs do
-   		 local p_ptr,p_len = coreir.get_src(input)
+   		 local p_arr,p_len = coreir.get_src(input)
 
-   		 local this = ffi.string(p_ptr[0])
-   		 local this2 = ffi.string(p_ptr[1])
-		 local wireable = coreir.module_sel(m, {this, this2})
+		 local wireable = coreir.module_sel(m, {p_arr[0], p_arr[1]})
    		 local wireable_type = coreir.lib.COREFlip(coreir.lib.COREWireableGetType(wireable))
 
-   		 representation[module_name].ports[ffi.string(p_ptr[1])] = {}
-   		 representation[module_name].ports[ffi.string(p_ptr[1])].type = coreir.parse_type(wireable_type)
-   		 representation[module_name].ports[ffi.string(p_ptr[1])].direction = coreir.type_direction(wireable_type)
+   		 representation[module_name].ports[ffi.string(p_arr[1])] = {}
+   		 representation[module_name].ports[ffi.string(p_arr[1])].type = coreir.parse_type(wireable_type)
+   		 representation[module_name].ports[ffi.string(p_arr[1])].direction = coreir.type_direction(wireable_type)
    	  end
 
    	  -- Parse module outputs
    	  local outputs,num_out = coreir.get_outputs(m)
    	  for i,output in next,outputs do
-   		 local p_ptr,p_len = coreir.get_snk(output)
+   		 local p_arr,p_len = coreir.get_snk(output)
 
-   		 local this = ffi.string(p_ptr[0])
-   		 local this2 = ffi.string(p_ptr[1])
-		 local wireable = coreir.module_sel(m, {this,this2})
+		 local wireable = coreir.module_sel(m, {p_arr[0], p_arr[1]})
    		 local wireable_type = coreir.lib.COREFlip(coreir.lib.COREWireableGetType(wireable))
 		 
-   		 representation[module_name].ports[ffi.string(p_ptr[1])] = {}
-   		 representation[module_name].ports[ffi.string(p_ptr[1])].type = coreir.parse_type(wireable_type)
-   		 representation[module_name].ports[ffi.string(p_ptr[1])].direction = coreir.type_direction(wireable_type)
+   		 representation[module_name].ports[ffi.string(p_arr[1])] = {}
+   		 representation[module_name].ports[ffi.string(p_arr[1])].type = coreir.parse_type(wireable_type)
+   		 representation[module_name].ports[ffi.string(p_arr[1])].direction = coreir.type_direction(wireable_type)
    	  end
    end
    
@@ -355,9 +413,9 @@ local function parse_module(m)
 	  -- Parse inputs
 	  local inputs,num_in = coreir.get_inst_inputs(dir_inst[i])
 	  for i,input in next,inputs do
-		 local p_ptr,p_len = coreir.get_snk(input)
+		 local p_arr,p_len = coreir.get_snk(input)
 
-		 local this2 = ffi.string(p_ptr[1])
+		 local this2 = p_arr[1]
 		 local wireable = coreir.module_sel(m, {this, this2})
 		 local wireable_type = coreir.lib.COREWireableGetType(wireable)   
 
@@ -369,9 +427,9 @@ local function parse_module(m)
 	  -- Parse outputs
 	  local outputs,num_out = coreir.get_inst_outputs(dir_inst[i])
 	  for i,output in next,outputs do
-		 local p_ptr,p_len = coreir.get_src(output)
+		 local p_arr,p_len = coreir.get_src(output)
 
-		 local this2 = ffi.string(p_ptr[1])
+		 local this2 = p_arr[1]
 		 local wireable = coreir.module_sel(m, {this, this2})
 		 local wireable_type = coreir.lib.COREWireableGetType(wireable)   
 
@@ -391,18 +449,18 @@ local function parse_module(m)
    
    local cns,num_connections = coreir.get_connections(m)
    for i,connection in next,cns do
-	  local src_ptr,src_len = coreir.get_src(connection)
-	  local snk_ptr,snk_len = coreir.get_snk(connection)
+	  local src_arr,src_len = coreir.get_src(connection)
+	  local snk_arr,snk_len = coreir.get_snk(connection)
 
 	  connections[i] = {}
 
 	  connections[i].src = {}
-	  connections[i].src.path = to_lua_arr(src_ptr, src_len, ffi.string)
-	  connections[i].src.wireable = coreir.module_sel(m, connections[i].src.path)
+	  connections[i].src.path = src_arr
+	  connections[i].src.wireable = coreir.module_sel(m, src_arr)
 
 	  connections[i].snk = {}
-	  connections[i].snk.path = to_lua_arr(snk_ptr, snk_len, ffi.string)
-	  connections[i].snk.wireable = coreir.module_sel(m, connections[i].snk.path)
+	  connections[i].snk.path = snk_arr
+	  connections[i].snk.wireable = coreir.module_sel(m, snk_arr)
    end
 
    representation[module_name].connections = connections
