@@ -9,8 +9,7 @@ local test_gen_defs = coreir.module_get_def(test_gen)
 
 local instances,num_insts = coreir.module_def_get_instances(test_gen_defs)
 
-for i=0,num_insts-1 do
-   local inst = instances[i]
+for i,inst in next,instances do
    io.write(coreir.get_inst_ref_name(inst) .. '\n')
 end
 
@@ -24,13 +23,6 @@ local outputs,num_outputs = coreir.get_outputs(test_gen)
 -- local arg_str = coreir.lib.COREArgStringGet(arg)
 -- local arg_int = coreir.lib.COREArgIntGet(arg)
 
-local dir_inst,num_d_inst = coreir.get_dir_inst(test_gen)
-for i=0,num_d_inst-1 do
-   coreir.get_inst_inputs(dir_inst[i])
-   coreir.get_inst_outputs(dir_inst[i])
-   io.write(i .. '\n')
-end
-
 local ffi = require('ffi')
 
 function hex_dump(buf)
@@ -43,47 +35,17 @@ function hex_dump(buf)
    end
 end
 
-local representation = {}
+local representation = coreir.parse_module(test_gen)
 
--- Idea: The get_inputs and get_inst_inputs both seem to work decently
--- We can use the selection path in order to figure out how everything is connected
--- The first element in the selection path is the module name, so we can get self
--- Then from there, we do something to get inst ref name
--- Not sure if we should use the inst inputs or the module inputs
--- Actually, we need to use both. The module for top level module, then inst internally
--- Anyhow, from there we can get the wireable from COREDirectedModuleSel
-for i=0,num_d_inst-1 do
-   local num_in = ffi.new("int[1]")
-   local in_ptr = coreir.lib.COREDirectedInstanceGetInputs(dir_inst[i], num_in)
-
-   local p_len = ffi.new("int[1]")
-   local p_ptr = coreir.lib.COREDirectedConnectionGetSnk(in_ptr[0], p_len)
-
-   local this = ffi.string(p_ptr[0])
-
-   local cstr_arr = ffi.new("const char*[1]")
-   cstr_arr[0] = ffi.new("char[?]", #this+1, this)
-   local directed_module = coreir.lib.COREModuleGetDirectedModule(test_gen)
-   local this_wireable = coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, 1)
-   io.write(this .. ' : ' .. coreir.get_inst_ref_name(this_wireable) .. '\n')
-   representation[this] = {}
-   representation[this].wireable = this_wireable
-   representation[this].instance = coreir.get_inst_ref_name(this_wireable)
-
-   local this2 = ffi.string(p_ptr[1])
-   local cstr_arr = ffi.new("const char*[2]")
-   cstr_arr[0] = ffi.new("char[?]", #this+1, this)
-   cstr_arr[1] = ffi.new("char[?]", #this2+1, this2)
-   local directed_module = coreir.lib.COREModuleGetDirectedModule(test_gen)
-   local wireable = coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, 2)
-   local wireable_type = coreir.lib.COREWireableGetType(wireable)   
-
-   representation[this].connections = {}
-   representation[this].connections[ffi.string(p_ptr[1])] = {}
-   representation[this].connections[ffi.string(p_ptr[1])].type = coreir.parse_type(wireable_type)
+local inspect_options = {}
+inspect_options.process = function(item, path)
+   if type(item) == 'cdata' then
+	  return tostring(item)
+   else
+	  return item
+   end
 end
-
-print(inspect(representation))
+print(inspect(representation, inspect_options))
 
 -- Trying to iterate through instances and print out the selection paths
 -- for i=0,num_insts-1 do
