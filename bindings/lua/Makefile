@@ -3,6 +3,9 @@ TRACE = ltrace -S
 
 all: lib lua
 
+docs:
+	ldoc .
+
 lib:
 	make -C ../../ install
 	gcc -E ../../include/coreir-c/coreir.h | sed '/^#/ d' > coreir-single.h
