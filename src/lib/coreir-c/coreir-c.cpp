@@ -234,7 +234,8 @@ extern "C" {
       *path_len = size;
       const char** arr = c->newConstStringArray(size);
       for (int i = 0; i < size; i ++) {
-          arr[i] = path[i].c_str();
+	      arr[i] = (const char*)calloc(sizeof(char), strlen(path[i].c_str()));
+	      strncpy((char*)arr[i], path[i].c_str(), strlen(path[i].c_str()));
       }
       return arr;
   }
@@ -247,7 +248,8 @@ extern "C" {
       *path_len = size;
       const char** arr = c->newConstStringArray(size);
       for (int i = 0; i < size; i ++) {
-          arr[i] = path[i].c_str();
+	      arr[i] = (const char*)calloc(sizeof(char), strlen(path[i].c_str()));
+	      strncpy((char*)arr[i], path[i].c_str(), strlen(path[i].c_str()));
       }
       return arr;
   }

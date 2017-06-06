@@ -27,12 +27,17 @@ end
 
 --- Convert a cdata array into a lua array.
 -- @tparam cdata ptr pointer to C array
+-- @tparam[opt] function(cdata) fun optional function to transform cdata array
 -- @tparam int num_elems length of array
 -- @return a lua array containing the data from ptr
-local function to_lua_arr(ptr, num_elems)
+local function to_lua_arr(ptr, num_elems, fun)
    local arr = {}
    for i=0,num_elems-1 do
-	  arr[i] = ptr[i]
+	  if fun == nil then
+		 arr[i] = ptr[i]
+	  else
+		 arr[i] = fun(ptr[i])
+	  end
    end
    return arr
 end
@@ -236,11 +241,25 @@ local function module_sel(m, path)
 	  cstr_arr[0] = ffi.new("char[?]", #path+1, path)
 	  return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, 1)
    elseif type(path) == 'table' then
-	  local cstr_arr = ffi.new("const char*[?]", #path)
-	  for i,v in ipairs(path) do
-		 cstr_arr[i-1] = ffi.new("char[?]", #v+1, v)
+	  if path[0] == nil then -- 1-indexed
+		 local cstr_arr = ffi.new("const char*[?]", #path)
+		 for i,v in pairs(path) do
+			cstr_arr[i-1] = ffi.new("char[?]", #v+1, v)
+		 end
+		 return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, #path)
+	  else -- 0-indexed
+		 local count = 0
+		 for _ in pairs(path) do
+			count = count+1
+		 end
+
+		 local cstr_arr = ffi.new("const char*[?]", count)
+		 for i=0,count-1 do
+			cstr_arr[i] = ffi.new("char[?]", #path[i]+1, path[i])
+		 end
+
+		 return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, count)
 	  end
-	  return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, #path)
    else
 	  assert(false, "Incompatible path type provided to module_sel")
    end
@@ -254,11 +273,6 @@ local function parse_module(m)
    local representation = {}
 
    local dir_inst,num_d_inst = coreir.get_dir_inst(m)
-   for i=0,num_d_inst-1 do
-	  coreir.get_inst_inputs(dir_inst[i])
-	  coreir.get_inst_outputs(dir_inst[i])
-	  io.write(i .. '\n')
-   end
 
    -- Takes in a directed instance and returns a string containing the name
    local function get_inst_name(inst)
@@ -332,12 +346,9 @@ local function parse_module(m)
 	  local this_wireable = get_inst_wireable(dir_inst[i])
 	  local this_type = get_inst_type(dir_inst[i])
 	  
-	  io.write(this .. ' : ' .. this_type .. '\n')
 	  representation[module_name].instances[this] = {}
 	  representation[module_name].instances[this].wireable = this_wireable
 	  representation[module_name].instances[this].instance = this_type
-
-	  representation[module_name].instances[this].ports = {}
 
 	  local ports = {}
 	  
@@ -376,8 +387,25 @@ local function parse_module(m)
    -- we also need to grab all the connections. The previous two loops
    -- can't handle the case where one input is connected to multiple
    -- outputs, so we need to do that here instead.
+   local connections = {}
+   
    local cns,num_connections = coreir.get_connections(m)
-   print(num_connections)
+   for i,connection in next,cns do
+	  local src_ptr,src_len = coreir.get_src(connection)
+	  local snk_ptr,snk_len = coreir.get_snk(connection)
+
+	  connections[i] = {}
+
+	  connections[i].src = {}
+	  connections[i].src.path = to_lua_arr(src_ptr, src_len, ffi.string)
+	  connections[i].src.wireable = coreir.module_sel(m, connections[i].src.path)
+
+	  connections[i].snk = {}
+	  connections[i].snk.path = to_lua_arr(snk_ptr, snk_len, ffi.string)
+	  connections[i].snk.wireable = coreir.module_sel(m, connections[i].snk.path)
+   end
+
+   representation[module_name].connections = connections
 
    -- I can actually also just use the raw cdata as indices to the table
    -- Need to consider the benefits/downsides of doing it each way...
