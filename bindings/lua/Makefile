@@ -26,6 +26,9 @@ core-slow: lib
 lua: lib
 	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit test.lua
 
+rigel: lib
+	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit rigel_test.lua
+
 lua-slow: lib
 	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit -joff test.lua
 

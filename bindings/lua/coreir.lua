@@ -94,13 +94,21 @@ init()
 -- @tparam string filename module file
 -- @treturn module
 local function load_module(filename)
-   local module_cstr = ffi.new("char[?]", #filename+1, filename)
+   local module_cstr = to_c_str(filename)
    local err = ffi.new("COREBool[1]")
    local m = coreir.lib.CORELoadModule(coreir.ctx, module_cstr, err)
    assert(err[0] == 0, "Failed to load module: " .. filename)
    return m
 end
 coreir.load_module = load_module
+
+local function save_module(m, filename)
+   local module_cstr = to_c_str(filename)
+   local err = ffi.new("COREBool[1]")
+   coreir.lib.CORESaveModule(getmetatable(m).module, module_cstr, err)
+   assert(err[0] == 0, "Failed to save module: " .. filename)
+end
+coreir.save_module = save_module
 
 --- Prints a module to stdout.
 -- @function print_module
@@ -342,6 +350,7 @@ end
 coreir.module_sel = module_sel
 
 --- Parses a module into a Lua table.
+-- @todo this should really generate a table that is similar to what is created by the module construction functions below.
 -- @function parse_module
 -- @tparam module m
 -- @return lua table describing the module
@@ -630,14 +639,20 @@ coreir.add_instance = add_instance
 
 --- Connects a and b inside a module.
 -- @todo yeah this really should be a class function, m.connect(a, b)
+-- @todo i can do connect(m.in, m.out), but later when i want to do something like get_connections(m.in), it will just return a COREWireable*, instead of something that also can tell you "m.out"... need some way of going backwards from wireables i guess...
+-- @todo instead of a list of pairs, maybe this should be a map of connection -> list(connections), and then duplicated for both connections
 -- @function connect
 -- @tparam module m
 -- @tparam COREWireable* a
 -- @tparam COREWireable* b
 local function connect(m, a, b)
-   coreir.lib.COREModuleDefConnect(getmetatable(m).def, a, b)
+   local m_meta = getmetatable(m)
+   coreir.lib.COREModuleDefConnect(m_meta.def, a, b)
+   m_meta.connections[#m_meta.connections+1] = { a, b}
 end
 coreir.connect = connect
+
+local inspect = require 'inspect'
 
 --- Some options to pass in to the lua inspect library
 -- @table inspect_options
@@ -651,7 +666,7 @@ inspect_options.process = function(item, path)
 	  local newitem = {}
 	  for i,v in pairs(item) do
 		 -- Make sure it's not just a random table with 0 as a key
-		 if type(i) ~= 'int' then return item end
+		 if type(i) ~= 'number' then return item end
 		 newitem[i+1] = v
 	  end
 	  return newitem
