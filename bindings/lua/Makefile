@@ -29,8 +29,8 @@ lua: lib
 lua-slow: lib
 	env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit -joff test.lua
 
-gdb: lib
-	gdb --args env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit -joff test.lua
+gdb: lib-debug
+	gdb -tui --args env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit -joff test.lua
 
 debug-slow: lib-debug
 	$(TRACE) env LD_LIBRARY_PATH=$(COREIR_LIB_DIR) luajit -joff test.lua

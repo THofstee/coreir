@@ -14,35 +14,34 @@ coreir.print_module(test_gen)
 
 local ffi = require('ffi')
 
-function hex_dump(buf)
-   for byte=1, #buf, 16 do
-	  local chunk = buf:sub(byte, byte+15)
-	  io.write(string.format('%08X  ',byte-1))
-	  chunk:gsub('.', function (c) io.write(string.format('%02X ',string.byte(c))) end)
-	  io.write(string.rep(' ',3*(16-#chunk)))
-	  io.write(' ',chunk:gsub('%c','.'),"\n") 
-   end
-end
+local typ = {
+	  ["in"] = coreir.array(coreir.bit_in, 24),
+	  ["out"] = coreir.array(coreir.bit_out, 24),
+}
+local t = coreir.module_from("test_module", typ)
+coreir.add_instance(t, t)
+coreir.add_instance(t, t)
+coreir.lib.COREModuleDefConnect(t._def, t["in"], t["out"])
 
-local representation = coreir.parse_module(test_gen)
+-- @todo Need to add some sort of way of specifying modules from a namespace
+-- @todo Want to add something to the API where you can pass in a lua function for generator_funcs
+-- @todo Need to add generators to the C API.
+-- @todo Want to add a nice type construction method to Lua.
 
-local inspect_options = {}
-inspect_options.process = function(item, path)
-   if type(item) == 'cdata' then
-	  -- Stringify cdata
-	  return tostring(item)
-   elseif type(item) == 'table' and item[0] ~= nil then
-	  -- Convert 0-based arrays to 1-based arrays
-	  local newitem = {}
-	  for i,v in pairs(item) do
-		 -- Make sure it's not just a random table with 0 as a key
-		 if type(i) ~= 'int' then return item end
-		 newitem[i+1] = v
-	  end
-	  return newitem
-   else
-	  return item
-   end
-end
-print(inspect(representation, inspect_options))
+coreir.print_module(t)
+print(inspect(t, coreir.inspect_options))
+
+-- function hex_dump(buf)
+--    for byte=1, #buf, 16 do
+-- 	  local chunk = buf:sub(byte, byte+15)
+-- 	  io.write(string.format('%08X  ',byte-1))
+-- 	  chunk:gsub('.', function (c) io.write(string.format('%02X ',string.byte(c))) end)
+-- 	  io.write(string.rep(' ',3*(16-#chunk)))
+-- 	  io.write(' ',chunk:gsub('%c','.'),"\n") 
+--    end
+-- end
+
+-- local representation = coreir.parse_module(test_gen)
+
+-- print(inspect(representation, coreir.inspect_options))
 

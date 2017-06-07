@@ -1,5 +1,7 @@
 --- Lua bindings to CoreIR.
 -- @module coreir
+-- @todo change all arrays to be 1-based
+-- @todo remove returning the length as a second parameter from functions
 local coreir = {}
 
 local ffi = require('ffi')
@@ -28,6 +30,7 @@ local function read_file(file)
 end
 
 --- Convert a cdata array into a (0-based) lua array.
+-- @todo change this to return a 1-based array
 -- @lfunction to_lua_arr
 -- @tparam cdata ptr pointer to C array
 -- @tparam int num_elems length of array
@@ -43,6 +46,14 @@ local function to_lua_arr(ptr, num_elems, fun)
 	  end
    end
    return arr
+end
+
+--- Converts a lua string to a C string.
+-- @lfunction to_c_str
+-- @tparam string s
+-- @treturn cdata<char*>
+local function to_c_str(s)
+   return ffi.new("char[?]", #s+1, s)
 end
 
 ---
@@ -93,10 +104,15 @@ coreir.load_module = load_module
 
 --- Prints a module to stdout.
 -- @function print_module
+-- @todo use metatables?
 -- @tparam module m
 -- @return nothing
 local function print_module(m)
-   coreir.lib.COREPrintModule(m)
+   if (type(m) == 'table') then
+	  coreir.lib.COREPrintModule(m._module)
+   else
+	  coreir.lib.COREPrintModule(m)
+   end
 end
 coreir.print_module = print_module
 
@@ -226,6 +242,7 @@ local function parse_type(t)
 	  parsed_type.size = coreir.lib.COREArrayTypeGetLen(t)
 	  parsed_type.type = parse_type(coreir.lib.COREArrayTypeGetElemType(t))
    elseif t_kind == ffi.new("CORETypeKind", "CORERecordTypeKind") then
+	  -- @todo needs some way of walking the records in a type...
 	  assert(false, "Not Implemented")
    elseif t_kind == ffi.new("CORETypeKind", "CORENamedTypeKind") then
 	  assert(false, "Not Implemented")
@@ -481,5 +498,147 @@ local function parse_module(m)
    return representation
 end
 coreir.parse_module = parse_module
+
+local function bit_in()
+   return coreir.lib.COREBitIn(coreir.ctx)
+end
+coreir.bit_in = bit_in()
+
+local function bit_out()
+   return coreir.lib.COREBit(coreir.ctx)
+end
+coreir.bit_out = bit_out()
+
+--- Creates a COREType array of provided type.
+-- @function array
+-- @tparam COREType* t
+-- @tparam int n length of array
+-- @treturn COREType*
+local function array(t, n)
+   return coreir.lib.COREArray(coreir.ctx, n, t)
+end
+coreir.array = array
+
+-- @todo I might want to refactor things to use metatables, this would be useful for things like getting the size of a table, etc...
+-- @todo Can I even use metatables with luajit?
+
+--- Creates a record type from provided table.
+-- Accepts a table mapping strings to COREType*.
+-- The created record type will be an equivalently named COREType*.
+-- @function record
+-- @tparam {[string]=COREType*,...} t
+-- @treturn COREType*
+local function record(t)
+   local len = 0
+   for _ in pairs(t) do
+	  len = len+1
+   end
+   
+   local keys = ffi.new("char*[?]", len)
+   local vals = ffi.new("COREType*[?]", len)
+   local idx = 0
+   for k,v in pairs(t) do
+	  keys[idx] = to_c_str(k)
+	  vals[idx] = v
+	  idx = idx+1
+   end
+   local params = coreir.lib.CORENewMap(coreir.ctx, keys, vals, len, ffi.new("COREMapKind", "STR2TYPE_ORDEREDMAP"))
+
+   return coreir.lib.CORERecord(coreir.ctx, params)
+end
+coreir.record = record
+
+--- Creates a module
+-- This function creates a module given a name and type signature.
+-- The type signature is assumed to be the interface of the module.
+-- This function also creates and associates a module_def to the created module.
+-- The names specified in the type signature can be used to index the returned module to access the wireables directly.
+-- @todo This should really be a class that it returns, with a connect method, etc.
+-- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
+-- @function module_from
+-- @tparam string name
+-- @tparam {[string]=COREType*,...} t type signature of the module
+-- @tparam[opt=global] ns namespace to put the created module
+-- @return an enhanced module to be used with other library functions
+local function module_from(name, t, ns)
+   local namespace = ns or coreir.global
+   local module_name = to_c_str(name)
+   local module_type = record(t)
+   local config_params = nil
+
+   -- Create the module
+   local m = coreir.lib.CORENewModule(namespace, module_name, module_type, config_params)
+
+   -- Set up some metadata and create a module_def
+   local res = {}
+   res._name = name
+   res._module = m
+   res._def = coreir.lib.COREModuleNewDef(res._module)
+   coreir.lib.COREModuleSetDef(res._module, res._def)
+
+   -- Add the wireables to the module
+   -- res._type = parse_type(module_type)
+   res._type = {}
+   res._interface = coreir.lib.COREModuleDefGetInterface(res._def)
+   for k,_ in pairs(t) do
+	  res[k] = coreir.lib.COREWireableSelect(res._interface, to_c_str(k))
+   end
+
+   res._instances = {}
+   res._connections = {}
+   
+   return res
+end
+coreir.module_from = module_from
+
+--- Generates a unique name given a string
+-- @lfunction unique_name
+local id = 0
+local function unique_name(s)
+   id = id + 1
+   return s .. id
+end
+
+--- Adds an instance of a module to the specified module_def
+-- @todo this really should probably be refactored into a class
+-- @function add_instance
+-- @tparam module m enhanced lua module to add the instance to
+-- @tparam module inst an enhanced lua module of the instance to be added
+-- @tparam[opt] string inst_name if not supplied, a unique name will be generated
+-- @tparam[opt] args args arguments to be supplied to the instance
+local function add_instance(m, inst, inst_name, args)
+   local name = inst_name or unique_name(m._name)
+   local args = args or {}
+   
+   local arg_map = coreir.lib.CORENewMap(coreir.ctx, nil, nil, 0, ffi.new("COREMapKind", "STR2ARG_MAP"))
+   coreir.lib.COREModuleDefAddModuleInstance(m._def, to_c_str(name), inst._module, arg_map)
+
+   m._instances[name] = {}
+   m._instances[name]._module = inst._module
+   m._instances[name]._args = args
+end
+coreir.add_instance = add_instance
+
+--- Some options to pass in to the lua inspect library
+-- @table inspect_options
+local inspect_options = {}
+inspect_options.process = function(item, path)
+   if type(item) == 'cdata' then
+	  -- Stringify cdata
+	  return tostring(item)
+   elseif type(item) == 'table' and item[0] ~= nil then
+	  -- Convert 0-based arrays to 1-based arrays
+	  local newitem = {}
+	  for i,v in pairs(item) do
+		 -- Make sure it's not just a random table with 0 as a key
+		 if type(i) ~= 'int' then return item end
+		 newitem[i+1] = v
+	  end
+	  return newitem
+   else
+	  return item
+   end
+end
+coreir.inspect_options = inspect_options
 
 return coreir
