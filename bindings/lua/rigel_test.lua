@@ -56,6 +56,15 @@ print(inspect(coreir.parse_module(stream_dup), coreir.inspect_options))
 -- Analyze the module and generate Rigel module
 local rate = 1/3
 
+local inSize = {1920, 1080}
+local padSize = {1920+9, 1080+2}
 
-local test = { ["src"] = {[0] = "a", [1] = "b"} }
--- print(inspect(
+local input = rigel_simple.input(rigel_simple.HS(rigel_simple.array(rigel_simple.uint8, 3)))
+-- local output = 
+-- local conv_func = rigel_simple.defineModule{ input = input, output = output}
+
+-- rigel_simple.harness{
+--    fn = conv_func,
+--    inFile = "1080p.raw", inSize = inSize,
+--    outFile = "convolve_slow", outSize = inSize,
+-- }
