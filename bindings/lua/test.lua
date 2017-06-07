@@ -20,8 +20,8 @@ local typ = {
 }
 local t = coreir.module_from("test_module", typ)
 coreir.add_instance(t, t)
-coreir.add_instance(t, t)
-coreir.lib.COREModuleDefConnect(t._def, t["in"], t["out"])
+coreir.connect(t, t["in"], t.test_module1["in"])
+coreir.connect(t, t.test_module1["out"], t["out"])
 
 -- @todo Need to add some sort of way of specifying modules from a namespace
 -- @todo Want to add something to the API where you can pass in a lua function for generator_funcs

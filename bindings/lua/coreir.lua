@@ -109,7 +109,7 @@ coreir.load_module = load_module
 -- @return nothing
 local function print_module(m)
    if (type(m) == 'table') then
-	  coreir.lib.COREPrintModule(m._module)
+	  coreir.lib.COREPrintModule(getmetatable(m).module)
    else
 	  coreir.lib.COREPrintModule(m)
    end
@@ -313,13 +313,13 @@ local function module_sel(m, path)
 
    if type(path) == 'string' then
 	  local cstr_arr = ffi.new("const char*[1]")
-	  cstr_arr[0] = ffi.new("char[?]", #path+1, path)
+	  cstr_arr[0] = to_c_str(path)
 	  return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, 1)
    elseif type(path) == 'table' then
 	  if path[0] == nil then -- 1-indexed
 		 local cstr_arr = ffi.new("const char*[?]", #path)
 		 for i,v in pairs(path) do
-			cstr_arr[i-1] = ffi.new("char[?]", #v+1, v)
+			cstr_arr[i-1] = to_c_str(v)
 		 end
 		 return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, #path)
 	  else -- 0-indexed
@@ -330,7 +330,7 @@ local function module_sel(m, path)
 
 		 local cstr_arr = ffi.new("const char*[?]", count)
 		 for i=0,count-1 do
-			cstr_arr[i] = ffi.new("char[?]", #path[i]+1, path[i])
+			cstr_arr[i] = to_c_str(path[i])
 		 end
 
 		 return coreir.lib.COREDirectedModuleSel(directed_module, cstr_arr, count)
@@ -570,23 +570,25 @@ local function module_from(name, t, ns)
    local m = coreir.lib.CORENewModule(namespace, module_name, module_type, config_params)
 
    -- Set up some metadata and create a module_def
+   local metadata = {}
    local res = {}
-   res._name = name
-   res._module = m
-   res._def = coreir.lib.COREModuleNewDef(res._module)
-   coreir.lib.COREModuleSetDef(res._module, res._def)
+   setmetatable(res, metadata)
+   metadata.name = name
+   metadata.module = m
+   metadata.def = coreir.lib.COREModuleNewDef(metadata.module)
+   coreir.lib.COREModuleSetDef(metadata.module, metadata.def)
 
    -- Add the wireables to the module
-   -- res._type = parse_type(module_type)
-   res._type = {}
-   res._interface = coreir.lib.COREModuleDefGetInterface(res._def)
+   -- metadata.type = parse_type(module_type)
+   metadata.type = t
+   metadata.interface = coreir.lib.COREModuleDefGetInterface(metadata.def)
    for k,_ in pairs(t) do
-	  res[k] = coreir.lib.COREWireableSelect(res._interface, to_c_str(k))
+	  res[k] = coreir.lib.COREWireableSelect(metadata.interface, to_c_str(k))
    end
 
-   res._instances = {}
-   res._connections = {}
-   
+   metadata.instances = {}
+   metadata.connections = {}
+
    return res
 end
 coreir.module_from = module_from
@@ -607,17 +609,39 @@ end
 -- @tparam[opt] string inst_name if not supplied, a unique name will be generated
 -- @tparam[opt] args args arguments to be supplied to the instance
 local function add_instance(m, inst, inst_name, args)
-   local name = inst_name or unique_name(m._name)
-   local args = args or {}
+   local m_meta = getmetatable(m)
+   local inst_meta = getmetatable(inst)
    
-   local arg_map = coreir.lib.CORENewMap(coreir.ctx, nil, nil, 0, ffi.new("COREMapKind", "STR2ARG_MAP"))
-   coreir.lib.COREModuleDefAddModuleInstance(m._def, to_c_str(name), inst._module, arg_map)
+   local name = inst_name or unique_name(inst_meta.name)
+   local args = args or {}
 
-   m._instances[name] = {}
-   m._instances[name]._module = inst._module
-   m._instances[name]._args = args
+   local arg_map = coreir.lib.CORENewMap(coreir.ctx, nil, nil, 0, ffi.new("COREMapKind", "STR2ARG_MAP"))
+   local module_inst = coreir.lib.COREModuleDefAddModuleInstance(m_meta.def, to_c_str(name), inst_meta.module, arg_map)
+
+   -- @todo it would be nice if you could do both module.instance and module.instance["in"] and have module.instance return the instance wireable, and module.instance["in"] return the wireable of instance->in...
+   -- @todo i think the latter is more important, i'm not sure when you would want to directly access the instance wireable, and if we wanted to wire two instances together we could analyze the two tables we get and connect the wireables of the instance connections...?
+   m[name] = {}
+   for k,_ in pairs(inst_meta.type) do
+	  m[name][k] = coreir.lib.COREWireableSelect(module_inst, to_c_str(k))
+   end
+   
+   m_meta.instances[name] = {}
+   m_meta.instances[name].module = inst_meta.name
+   m_meta.instances[name].wireable = module_inst
+   m_meta.instances[name].args = args
 end
 coreir.add_instance = add_instance
+
+--- Connects a and b inside a module.
+-- @todo yeah this really should be a class function, m.connect(a, b)
+-- @function connect
+-- @tparam module m
+-- @tparam COREWireable* a
+-- @tparam COREWireable* b
+local function connect(m, a, b)
+   coreir.lib.COREModuleDefConnect(getmetatable(m).def, a, b)
+end
+coreir.connect = connect
 
 --- Some options to pass in to the lua inspect library
 -- @table inspect_options
