@@ -104,7 +104,6 @@ coreir.load_module = load_module
 
 --- Prints a module to stdout.
 -- @function print_module
--- @todo use metatables?
 -- @tparam module m
 -- @return nothing
 local function print_module(m)
@@ -518,9 +517,6 @@ local function array(t, n)
    return coreir.lib.COREArray(coreir.ctx, n, t)
 end
 coreir.array = array
-
--- @todo I might want to refactor things to use metatables, this would be useful for things like getting the size of a table, etc...
--- @todo Can I even use metatables with luajit?
 
 --- Creates a record type from provided table.
 -- Accepts a table mapping strings to COREType*.
