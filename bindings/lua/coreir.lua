@@ -611,9 +611,9 @@ end
 -- @function add_instance
 -- @tparam module m enhanced lua module to add the instance to
 -- @tparam module inst an enhanced lua module of the instance to be added
--- @tparam[opt] string inst_name if not supplied, a unique name will be generated
 -- @tparam[opt] args args arguments to be supplied to the instance
-local function add_instance(m, inst, inst_name, args)
+-- @tparam[opt] string inst_name if not supplied, a unique name will be generated
+local function add_instance(m, inst, args, inst_name)
    local m_meta = getmetatable(m)
    local inst_meta = getmetatable(inst)
    
