@@ -80,15 +80,13 @@ local function load_lib(lib)
 end
 coreir.load_lib = load_lib
 
---- Initializes the coreir module.
--- This function is called internally to initialize the coreir module by
--- loading the libcoreir-c shared library, creating a context, and a
--- global namespace. This function also loads coreir-stdlib.
--- @lfunction init
-local function init()
-   ffi.cdef(read_file(header_path .. 'coreir-single.h'))
-
-   -- Set up metatypes
+--- Initializes the wireable metatype.
+-- Allows a cdata wireable to be accessed as an object, and a table simultaneously.
+-- Tables for each wireable are stored in the wireable_mt metatable.
+-- Ideally, each object itself would have its own metatable but we can't attach metatables to things that aren't tables in lua.
+-- What this means is if we have a module with the following structure: module m = { foo = { in, out } }, then we can retrieve the wireable for foo with m.foo, and the wireable for foo's connections with m.foo.in and m.foo.out.
+-- @lfunction init_wireable_mt
+local function init_wireable_mt()
    local wireable_mt = {}
    wireable_mt.wireables = {}
    wireable_mt.__newindex = function(t, k, v)
@@ -106,6 +104,18 @@ local function init()
 	  end
    end
    ffi.metatype("struct COREWireable", wireable_mt)
+end
+
+--- Initializes the coreir module.
+-- This function is called internally to initialize the coreir module by
+-- loading the libcoreir-c shared library, creating a context, and a
+-- global namespace. This function also loads coreir-stdlib.
+-- @lfunction init
+local function init()
+   ffi.cdef(read_file(header_path .. 'coreir-single.h'))
+
+   -- Set up metatypes
+   init_wireable_mt()
 
    -- Load coreir lib
    coreir.lib = ffi.load(lib_path .. 'libcoreir-c.so')
