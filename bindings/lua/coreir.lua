@@ -23,10 +23,20 @@ end
 -- @tparam string file path to the file
 -- @treturn string contents of file
 local function read_file(file)
-   local f = assert(io.open(file), "Could not open " .. file .. " for reading")
+   local f = assert(io.open(file, "r"), "Could not open " .. file .. " for reading")
    local content = f:read("*a")
    f:close()
    return content
+end
+
+--- Writes the string to a file
+-- @lfunction write_file
+-- @tparam string file path to the file
+-- @tparam string data contents to write
+local function write_file(file, data)
+   local f = assert(io.open(file, "w"), "Could not open " .. file .. " for writing")
+   f:write(data)
+   f:close()
 end
 
 --- Convert a cdata array into a (0-based) lua array.
@@ -598,6 +608,47 @@ local function module_from(name, t, ns)
 end
 coreir.module_from = module_from
 
+--- Creates a primitive module
+-- This function creates a module given a name and type signature.
+-- The type signature is assumed to be the interface of the module.
+-- This function does not create a module_def.
+-- You should not associate a module_def to these modules.
+-- The names specified in the type signature can be used to index the returned module to access the wireables directly.
+-- @todo This should really be a class that it returns, with a connect method, etc.
+-- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
+-- @function module_from
+-- @tparam string name
+-- @tparam {[string]=COREType*,...} t type signature of the module
+-- @tparam[opt=global] ns namespace to put the created module
+-- @return an enhanced module to be used with other library functions
+local function primitive_from(name, t, ns)
+   local namespace = ns or coreir.global
+   local module_name = to_c_str(name)
+   local module_type = record(t)
+   local config_params = nil
+
+   -- Create the module
+   local m = coreir.lib.CORENewModule(namespace, module_name, module_type, config_params)
+
+   -- Set up some metadata and create a module_def
+   local metadata = {}
+   local res = {}
+   setmetatable(res, metadata)
+   metadata.name = name
+   metadata.module = m
+
+   -- Add the wireables to the module
+   -- metadata.type = parse_type(module_type)
+   metadata.type = t
+   metadata.interface = coreir.lib.COREModuleDefGetInterface(metadata.def)
+   for k,_ in pairs(t) do
+	  res[k] = coreir.lib.COREWireableSelect(metadata.interface, to_c_str(k))
+   end
+
+   return res
+end
+coreir.primitive_from = primitive_from
+
 --- Generates a unique name given a string
 -- @lfunction unique_name
 local id = 0
@@ -625,6 +676,7 @@ local function add_instance(m, inst, args, inst_name)
 
    -- @todo it would be nice if you could do both module.instance and module.instance["in"] and have module.instance return the instance wireable, and module.instance["in"] return the wireable of instance->in...
    -- @todo i think the latter is more important, i'm not sure when you would want to directly access the instance wireable, and if we wanted to wire two instances together we could analyze the two tables we get and connect the wireables of the instance connections...?
+   -- @todo aha! i can start to do something more like this by putting a metatable in the instance, i think. this should help to some degree.
    m[name] = {}
    for k,_ in pairs(inst_meta.type) do
 	  m[name][k] = coreir.lib.COREWireableSelect(module_inst, to_c_str(k))

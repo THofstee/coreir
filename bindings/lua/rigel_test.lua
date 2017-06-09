@@ -36,6 +36,13 @@ local linebuf = coreir.module_from("line_buffer", linebuffer_t)
 local conv = coreir.module_from("conv", conv_t)
 local stream = coreir.module_from("stream", stream_t)
 
+-- Create a small dictionary to look up unknown module contents
+-- @todo this should probably be in coreir.lua somewhere
+local module_dict = {}
+module_dict.linebuf = linebuf
+module_dict.conv = conv
+module_dict.stream = stream
+
 -- @todo definitely need the generator available on C api...
 local conv_args = {
    ["weights"] = {
@@ -46,8 +53,14 @@ local conv_args = {
    }
 }
 
+-- Compact the 4x4 table into a 1x16 table
+for i,v in ipairs(conv_args) do
+
+end
+
 -- @todo also need a way to run generators in the C api...
-coreir.add_instance(conv, linebuf, {}, "wat")
+-- coreir.connect(conv, conv["in"], conv["out"])
+-- coreir.connect(linebuf, linebuf["in"], linebuf["out"])
 
 -- Make the top stream module
 coreir.add_instance(stream, linebuf, {}, "line_buffer1")
@@ -64,16 +77,35 @@ coreir.connect(stream, stream.line_buffer1["out"], stream.conv2["in"])
 
 coreir.connect(stream, stream.conv2["out"], stream["out"])
 
-local err = ffi.new("COREBool[1]")
-coreir.lib.CORERunGenerators(coreir.ctx, getmetatable(stream).module, err)
-
 coreir.print_module(stream)
 print(inspect(stream, coreir.inspect_options))
 
+coreir.lib.COREInlineInstance(getmetatable(stream).instances["line_buffer1"].wireable)
+-- coreir.lib.COREInlineInstance(getmetatable(stream).instances["conv2"].wireable)
+-- local err = ffi.new("COREBool[1]")
+-- coreir.lib.COREFlatten(coreir.ctx, getmetatable(stream).module, err)
+
+coreir.print_module(stream)
+-- print(inspect(stream, coreir.inspect_options))
+
 coreir.save_module(stream, "_conv.json")
 local stream_dup = coreir.load_module("_conv.json")
-coreir.print_module(stream_dup)
-print(inspect(coreir.parse_module(stream_dup), coreir.inspect_options))
+-- coreir.print_module(stream_dup)
+-- print(inspect(coreir.parse_module(stream_dup), coreir.inspect_options))
+
+local _created = inspect(coreir.parse_module(getmetatable(stream).module), coreir.inspect_options)
+local _loaded = inspect(coreir.parse_module(stream_dup), coreir.inspect_options)
+if _created ~= _loaded then
+   local function write_file(file, data)
+	  local f = assert(io.open(file, "w"), "Could not open " .. file .. " for writing")
+	  f:write(data)
+	  f:close()
+   end
+
+   print("Parsing generated module differs from parsing loaded module.")
+   write_file("_created.json", _created)
+   write_file("_loaded.json", _loaded)
+end
 
 -- Analyze the module and generate Rigel module
 local rate = 1/4

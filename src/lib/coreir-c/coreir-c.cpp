@@ -72,8 +72,16 @@ extern "C" {
     return rcast<COREArg*>(rcast<Instance*>(i)->getConfigArg(str));
   }
 
+	void COREFlatten(COREContext* c, COREModule* m, bool* err) {
+		flatten(rcast<Context*>(c), rcast<Module*>(m), err);
+	}
+
 	void CORERunGenerators(COREContext* c, COREModule* m, bool* err) {
 		rungenerators(rcast<Context*>(c), rcast<Module*>(m), err);
+	}
+
+	void COREInlineInstance(COREWireable* i) {
+		inlineInstance(rcast<Instance*>(i));
 	}
   
   COREModule* CORELoadModule(COREContext* c, char* filename, bool* err) {

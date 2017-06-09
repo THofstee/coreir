@@ -41,7 +41,9 @@ extern COREDirectedModule* COREModuleGetDirectedModule(COREModule* module);
 extern COREWireable* COREModuleDefAddModuleInstance(COREModuleDef* module_def, char* name, COREModule* module, void* config); //config will be Args*
 extern COREWireable* COREModuleDefGetInterface(COREModuleDef* m);
 extern COREArg* COREGetConfigValue(COREWireable* i, char* s);
+extern void COREFlatten(COREContext* c, COREModule* m, COREBool* err);
 extern void CORERunGenerators(COREContext* c, COREModule* m, COREBool* err);
+extern void COREInlineInstance(COREWireable* i);
 
 //Errors:
 //  Wire Error;
