@@ -565,51 +565,6 @@ coreir.record = record
 
 -- @todo add support for creating named types, and put the results in coreir.type.typenamehere
 
---- Creates a module
--- This function creates a module given a name and type signature.
--- The type signature is assumed to be the interface of the module.
--- This function also creates and associates a module_def to the created module.
--- The names specified in the type signature can be used to index the returned module to access the wireables directly.
--- @todo This should really be a class that it returns, with a connect method, etc.
--- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
--- @function module_from
--- @tparam string name
--- @tparam {[string]=COREType*,...} t type signature of the module
--- @tparam[opt=global] ns namespace to put the created module
--- @return an enhanced module to be used with other library functions
-local function module_from(name, t, ns)
-   local namespace = ns or coreir.global
-   local module_name = to_c_str(name)
-   local module_type = record(t)
-   local config_params = nil
-
-   -- Create the module
-   local m = coreir.lib.CORENewModule(namespace, module_name, module_type, config_params)
-
-   -- Set up some metadata and create a module_def
-   local metadata = {}
-   local res = {}
-   setmetatable(res, metadata)
-   metadata.name = name
-   metadata.module = m
-   metadata.def = coreir.lib.COREModuleNewDef(metadata.module)
-   coreir.lib.COREModuleSetDef(metadata.module, metadata.def)
-
-   -- Add the wireables to the module
-   -- metadata.type = parse_type(module_type)
-   metadata.type = t
-   metadata.interface = coreir.lib.COREModuleDefGetInterface(metadata.def)
-   for k,_ in pairs(t) do
-	  res[k] = coreir.lib.COREWireableSelect(metadata.interface, to_c_str(k))
-   end
-
-   metadata.instances = {}
-   metadata.connections = {}
-
-   return res
-end
-coreir.module_from = module_from
-
 --- Creates a primitive module
 -- This function creates a module given a name and type signature.
 -- The type signature is assumed to be the interface of the module.
@@ -618,7 +573,7 @@ coreir.module_from = module_from
 -- The names specified in the type signature can be used to index the returned module to access the wireables directly.
 -- @todo This should really be a class that it returns, with a connect method, etc.
 -- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
--- @function module_from
+-- @function primitive_from
 -- @tparam string name
 -- @tparam {[string]=COREType*,...} t type signature of the module
 -- @tparam[opt=global] ns namespace to put the created module
@@ -638,14 +593,45 @@ local function primitive_from(name, t, ns)
    setmetatable(res, metadata)
    metadata.name = name
    metadata.module = m
-
-   -- Add the wireables to the module
-   -- metadata.type = parse_type(module_type)
+-- metadata.type = parse_type(module_type)
    metadata.type = t
 
    return res
 end
 coreir.primitive_from = primitive_from
+
+--- Creates a module
+-- This function creates a module given a name and type signature.
+-- The type signature is assumed to be the interface of the module.
+-- This function also creates and associates a module_def to the created module.
+-- The names specified in the type signature can be used to index the returned module to access the wireables directly.
+-- @todo This should really be a class that it returns, with a connect method, etc.
+-- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
+-- @function module_from
+-- @tparam string name
+-- @tparam {[string]=COREType*,...} t type signature of the module
+-- @tparam[opt=global] ns namespace to put the created module
+-- @return an enhanced module to be used with other library functions
+local function module_from(name, t, ns)
+   local res = primitive_from(name, t, ns)
+   local metadata = getmetatable(res)
+
+   -- Create and link module_def
+   metadata.def = coreir.lib.COREModuleNewDef(metadata.module)
+   coreir.lib.COREModuleSetDef(metadata.module, metadata.def)
+
+   -- Add the wireables to the module
+   metadata.interface = coreir.lib.COREModuleDefGetInterface(metadata.def)
+   for k,_ in pairs(t) do
+	  res[k] = coreir.lib.COREWireableSelect(metadata.interface, to_c_str(k))
+   end
+
+   metadata.instances = {}
+   metadata.connections = {}
+
+   return res
+end
+coreir.module_from = module_from
 
 --- Generates a unique name given a string
 -- @lfunction unique_name
