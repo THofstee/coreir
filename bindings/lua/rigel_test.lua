@@ -83,6 +83,7 @@ local err = ffi.new("COREBool[1]")
 coreir.lib.COREFlatten(coreir.ctx, getmetatable(stream).module, err)
 
 coreir.print_module(stream)
+print(coreir.get_inst_ref_name(stream.conv2))
 -- print(inspect(stream, coreir.inspect_options))
 
 coreir.save_module(stream, "_conv.json")
