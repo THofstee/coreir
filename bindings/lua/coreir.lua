@@ -587,7 +587,7 @@ local function primitive_from(name, t, ns)
    -- Create the module
    local m = coreir.lib.CORENewModule(namespace, module_name, module_type, config_params)
 
-   -- Set up some metadata and create a module_def
+   -- Set up some metadata
    local metadata = {}
    local res = {}
    setmetatable(res, metadata)
