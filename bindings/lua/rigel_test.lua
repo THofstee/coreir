@@ -11,6 +11,8 @@ local bpp = 8
 local mat_w = 4
 local mat_h = 4
 
+-- @todo add support for creating named types, and put the results in coreir.type.typenamehere
+
 local linebuffer_t = {
    ["clk"] = coreir.bit_in,
    ["rst_b"] = coreir.bit_in,
@@ -59,53 +61,50 @@ for i,v in ipairs(conv_args) do
 end
 
 -- @todo also need a way to run generators in the C api...
--- coreir.connect(conv, conv["in"], conv["out"])
--- coreir.connect(linebuf, linebuf["in"], linebuf["out"])
+coreir.connect(conv, conv["in"], conv["out"])
 
--- -- Make the top stream module
--- coreir.add_instance(stream, linebuf, {}, "line_buffer1")
--- coreir.add_instance(stream, conv, conv_args, "conv2")
+-- Make the top stream module
+coreir.add_instance(stream, linebuf, {}, "line_buffer1")
+coreir.add_instance(stream, conv, conv_args, "conv2")
 
--- coreir.connect(stream, stream["clk"], stream.line_buffer1["clk"])
--- coreir.connect(stream, stream["rst_b"], stream.line_buffer1["rst_b"])
--- coreir.connect(stream, stream["clk"], stream.conv2["clk"])
--- coreir.connect(stream, stream["rst_b"], stream.conv2["rst_b"])
+coreir.connect(stream, stream["clk"], stream.line_buffer1["clk"])
+coreir.connect(stream, stream["rst_b"], stream.line_buffer1["rst_b"])
+coreir.connect(stream, stream["clk"], stream.conv2["clk"])
+coreir.connect(stream, stream["rst_b"], stream.conv2["rst_b"])
 
--- coreir.connect(stream, stream["in"], stream.line_buffer1["in"])
+coreir.connect(stream, stream["in"], stream.line_buffer1["in"])
 
--- coreir.connect(stream, stream.line_buffer1["out"], stream.conv2["in"])
+coreir.connect(stream, stream.line_buffer1["out"], stream.conv2["in"])
 
--- coreir.connect(stream, stream.conv2["out"], stream["out"])
+coreir.connect(stream, stream.conv2["out"], stream["out"])
 
--- coreir.print_module(stream)
+coreir.print_module(stream)
+print(inspect(stream, coreir.inspect_options))
+
+local err = ffi.new("COREBool[1]")
+coreir.lib.COREFlatten(coreir.ctx, getmetatable(stream).module, err)
+
+coreir.print_module(stream)
 -- print(inspect(stream, coreir.inspect_options))
 
--- -- coreir.lib.COREInlineInstance(getmetatable(stream).instances["line_buffer1"].wireable)
--- -- coreir.lib.COREInlineInstance(getmetatable(stream).instances["conv2"].wireable)
--- -- local err = ffi.new("COREBool[1]")
--- -- coreir.lib.COREFlatten(coreir.ctx, getmetatable(stream).module, err)
+coreir.save_module(stream, "_conv.json")
+local stream_dup = coreir.load_module("_conv.json")
+-- coreir.print_module(stream_dup)
+-- print(inspect(coreir.parse_module(stream_dup), coreir.inspect_options))
 
--- coreir.print_module(stream)
--- -- print(inspect(stream, coreir.inspect_options))
+local _created = inspect(coreir.parse_module(getmetatable(stream).module), coreir.inspect_options)
+local _loaded = inspect(coreir.parse_module(stream_dup), coreir.inspect_options)
+if _created ~= _loaded then
+   local function write_file(file, data)
+	  local f = assert(io.open(file, "w"), "Could not open " .. file .. " for writing")
+	  f:write(data)
+	  f:close()
+   end
 
--- coreir.save_module(stream, "_conv.json")
--- local stream_dup = coreir.load_module("_conv.json")
--- -- coreir.print_module(stream_dup)
--- -- print(inspect(coreir.parse_module(stream_dup), coreir.inspect_options))
-
--- local _created = inspect(coreir.parse_module(getmetatable(stream).module), coreir.inspect_options)
--- local _loaded = inspect(coreir.parse_module(stream_dup), coreir.inspect_options)
--- if _created ~= _loaded then
---    local function write_file(file, data)
--- 	  local f = assert(io.open(file, "w"), "Could not open " .. file .. " for writing")
--- 	  f:write(data)
--- 	  f:close()
---    end
-
---    print("Parsing generated module differs from parsing loaded module.")
---    write_file("_created.json", _created)
---    write_file("_loaded.json", _loaded)
--- end
+   print("Parsing generated module differs from parsing loaded module.")
+   write_file("_created.json", _created)
+   write_file("_loaded.json", _loaded)
+end
 
 -- Analyze the module and generate Rigel module
 local rate = 1/4

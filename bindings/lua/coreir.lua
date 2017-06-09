@@ -563,6 +563,8 @@ local function record(t)
 end
 coreir.record = record
 
+-- @todo add support for creating named types, and put the results in coreir.type.typenamehere
+
 --- Creates a module
 -- This function creates a module given a name and type signature.
 -- The type signature is assumed to be the interface of the module.
@@ -640,10 +642,6 @@ local function primitive_from(name, t, ns)
    -- Add the wireables to the module
    -- metadata.type = parse_type(module_type)
    metadata.type = t
-   metadata.interface = coreir.lib.COREModuleDefGetInterface(metadata.def)
-   for k,_ in pairs(t) do
-	  res[k] = coreir.lib.COREWireableSelect(metadata.interface, to_c_str(k))
-   end
 
    return res
 end
