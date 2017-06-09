@@ -209,19 +209,3 @@ rs.harness{
    inFile = "1080p.raw", inSize = inSize,
    outFile = "convolve_slow", outSize = inSize,
 }
-
--- A way to access things as both elements and a table
-local module_mt = {}
-module_mt.modules = {}
-module_mt.__index = function(t, k)
-   return module_mt.modules[t][k]
-end
-ffi.metatype("struct COREModule", module_mt)
-
-local m = getmetatable(stream).module
-
-module_mt.modules[m] = {}
-module_mt.modules[m]["in"] = stream["in"]
-
-print(m)
-print(m["in"])
