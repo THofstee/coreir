@@ -1,5 +1,6 @@
 package.path = "/home/hofstee/rigel/?.lua;/home/hofstee/rigel/src/?.lua;/home/hofstee/rigel/examples/?.lua;" .. package.path
 
+local ffi = require 'ffi'
 local inspect = require 'inspect'
 local coreir = require 'coreir'
 local rs = require 'rigelSimple'
@@ -35,8 +36,22 @@ local linebuf = coreir.module_from("line_buffer", linebuffer_t)
 local conv = coreir.module_from("conv", conv_t)
 local stream = coreir.module_from("stream", stream_t)
 
-coreir.add_instance(stream, linebuf)
-coreir.add_instance(stream, conv)
+-- @todo definitely need the generator available on C api...
+local conv_args = {
+   ["weights"] = {
+	  { 4, 14, 14,  4},
+	  {14, 32, 32, 14},
+	  {14, 32, 32, 14},
+	  { 4, 14, 14,  4}
+   }
+}
+
+-- @todo also need a way to run generators in the C api...
+coreir.add_instance(conv, linebuf, {}, "wat")
+
+-- Make the top stream module
+coreir.add_instance(stream, linebuf, {}, "line_buffer1")
+coreir.add_instance(stream, conv, conv_args, "conv2")
 
 coreir.connect(stream, stream["clk"], stream.line_buffer1["clk"])
 coreir.connect(stream, stream["rst_b"], stream.line_buffer1["rst_b"])
@@ -48,6 +63,9 @@ coreir.connect(stream, stream["in"], stream.line_buffer1["in"])
 coreir.connect(stream, stream.line_buffer1["out"], stream.conv2["in"])
 
 coreir.connect(stream, stream.conv2["out"], stream["out"])
+
+local err = ffi.new("COREBool[1]")
+coreir.lib.CORERunGenerators(coreir.ctx, getmetatable(stream).module, err)
 
 coreir.print_module(stream)
 print(inspect(stream, coreir.inspect_options))

@@ -7,6 +7,7 @@ docs:
 	ldoc .
 
 lib:
+	make -C ../../src/lib/passes so
 	make -C ../../ install
 	gcc -E ../../include/coreir-c/coreir.h | sed '/^#/ d' > coreir-single.h
 	gcc -E -I../../include/ ../../include/coreir-lib/stdlib.h | sed '/^#/ d' > coreir-stdlib.h

@@ -1,6 +1,7 @@
 #include "coreir-c/coreir.h"
 #include "coreir.h"
 #include "common-c.hpp"
+#include "coreir-pass/passes.h"
 
 namespace CoreIR {
 
@@ -70,7 +71,10 @@ extern "C" {
     string str(s);
     return rcast<COREArg*>(rcast<Instance*>(i)->getConfigArg(str));
   }
-  
+
+	void CORERunGenerators(COREContext* c, COREModule* m, bool* err) {
+		rungenerators(rcast<Context*>(c), rcast<Module*>(m), err);
+	}
   
   COREModule* CORELoadModule(COREContext* c, char* filename, bool* err) {
     string file(filename);

@@ -34,7 +34,7 @@ clean:
 	rm -rf build/*
 
 build/%.so: $(OBJS)
-	$(CXX) $(CXXFLAGS) -shared $(LPATH) -o $@ $^ -lcoreir
+	$(CXX) $(CXXFLAGS) -shared $(LPATH) -o $@ $^ -lcoreir -lcoreir-passes
 	cp $@ $(HOME)/lib/lib$*.so
 
 build/%.dylib: $(OBJS)
