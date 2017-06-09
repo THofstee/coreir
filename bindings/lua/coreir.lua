@@ -87,8 +87,30 @@ coreir.load_lib = load_lib
 -- @lfunction init
 local function init()
    ffi.cdef(read_file(header_path .. 'coreir-single.h'))
+
+   -- Set up metatypes
+   local wireable_mt = {}
+   wireable_mt.wireables = {}
+   wireable_mt.__newindex = function(t, k, v)
+	  if wireable_mt.wireables[t] == nil then
+		 wireable_mt.wireables[t] = {}
+	  end
+	  wireable_mt.wireables[t][k] = v
+   end
+   wireable_mt.__index = function(t, k)
+	  return wireable_mt.wireables[t][k]
+   end
+   wireable_mt.__call = function(t, fun)
+	  if     fun == "table" then return wireable_mt.wireables[t]
+	  elseif fun == "self" then return t
+	  end
+   end
+   ffi.metatype("struct COREWireable", wireable_mt)
+
+   -- Load coreir lib
    coreir.lib = ffi.load(lib_path .. 'libcoreir-c.so')
 
+   -- Create a new context and get global namespace
    coreir.ctx = coreir.lib.CORENewContext()
    coreir.global = coreir.lib.COREGetGlobal(coreir.ctx)
 
@@ -606,8 +628,7 @@ coreir.primitive_from = primitive_from
 -- The type signature is assumed to be the interface of the module.
 -- This function also creates and associates a module_def to the created module.
 -- The names specified in the type signature can be used to index the returned module to access the wireables directly.
--- @todo This should really be a class that it returns, with a connect method, etc.
--- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
+-- @todo see primitive_from
 -- @function module_from
 -- @tparam string name
 -- @tparam {[string]=COREType*,...} t type signature of the module
@@ -642,6 +663,7 @@ local function unique_name(s)
    return s .. id
 end
 
+
 --- Adds an instance of a module to the specified module_def
 -- @todo this really should probably be refactored into a class
 -- @function add_instance
@@ -659,10 +681,7 @@ local function add_instance(m, inst, args, inst_name)
    local arg_map = coreir.lib.CORENewMap(coreir.ctx, nil, nil, 0, ffi.new("COREMapKind", "STR2ARG_MAP"))
    local module_inst = coreir.lib.COREModuleDefAddModuleInstance(m_meta.def, to_c_str(name), inst_meta.module, arg_map)
 
-   -- @todo it would be nice if you could do both module.instance and module.instance["in"] and have module.instance return the instance wireable, and module.instance["in"] return the wireable of instance->in...
-   -- @todo i think the latter is more important, i'm not sure when you would want to directly access the instance wireable, and if we wanted to wire two instances together we could analyze the two tables we get and connect the wireables of the instance connections...?
-   -- @todo aha! i can start to do something more like this by putting a metatable in the instance, i think. this should help to some degree.
-   m[name] = {}
+   m[name] = module_inst
    for k,_ in pairs(inst_meta.type) do
 	  m[name][k] = coreir.lib.COREWireableSelect(module_inst, to_c_str(k))
    end
@@ -696,8 +715,19 @@ local inspect = require 'inspect'
 local inspect_options = {}
 inspect_options.process = function(item, path)
    if type(item) == 'cdata' then
-	  -- Stringify cdata
-	  return tostring(item)
+	  if ffi.typeof(item) == ffi.typeof('struct COREWireable *') then
+		 -- Unwrap COREWireable first
+		 if item("table") == nil then
+			return tostring(item)
+		 else
+			local t = item("table")
+			t._this = tostring(item)
+			return t
+		 end
+	  else
+		 -- Stringify cdata
+		 return tostring(item)
+	  end
    elseif type(item) == 'table' and item[0] ~= nil then
 	  -- Convert 0-based arrays to 1-based arrays
 	  local newitem = {}

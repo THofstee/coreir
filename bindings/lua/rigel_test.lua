@@ -216,9 +216,9 @@ module_mt.modules = {}
 module_mt.__index = function(t, k)
    return module_mt.modules[t][k]
 end
+ffi.metatype("struct COREModule", module_mt)
 
 local m = getmetatable(stream).module
-ffi.metatype("struct COREModule", module_mt)
 
 module_mt.modules[m] = {}
 module_mt.modules[m]["in"] = stream["in"]
