@@ -573,6 +573,7 @@ coreir.record = record
 -- The names specified in the type signature can be used to index the returned module to access the wireables directly.
 -- @todo This should really be a class that it returns, with a connect method, etc.
 -- @todo Try to figure out a different way than requiring all the arguments, maybe using metatables or something else to figure out the name? Or a _name entry in the table? Using underscored entries means that record parsing above needs to change too.
+-- @todo maybe should also allow t to be a COREType*, in this case parse_type needs to be fleshed out
 -- @function primitive_from
 -- @tparam string name
 -- @tparam {[string]=COREType*,...} t type signature of the module

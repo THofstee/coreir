@@ -11,8 +11,6 @@ local bpp = 8
 local mat_w = 4
 local mat_h = 4
 
--- @todo add support for creating named types, and put the results in coreir.type.typenamehere
-
 local linebuffer_t = {
    ["clk"] = coreir.bit_in,
    ["rst_b"] = coreir.bit_in,
@@ -211,3 +209,19 @@ rs.harness{
    inFile = "1080p.raw", inSize = inSize,
    outFile = "convolve_slow", outSize = inSize,
 }
+
+-- A way to access things as both elements and a table
+local module_mt = {}
+module_mt.modules = {}
+module_mt.__index = function(t, k)
+   return module_mt.modules[t][k]
+end
+
+local m = getmetatable(stream).module
+ffi.metatype("struct COREModule", module_mt)
+
+module_mt.modules[m] = {}
+module_mt.modules[m]["in"] = stream["in"]
+
+print(m)
+print(m["in"])
