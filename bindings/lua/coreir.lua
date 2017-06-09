@@ -108,8 +108,9 @@ end
 
 --- Initializes the coreir module.
 -- This function is called internally to initialize the coreir module by
--- loading the libcoreir-c shared library, creating a context, and a
--- global namespace. This function also loads coreir-stdlib.
+-- intitializing metatypes for coreir, loading the libcoreir-c shared
+-- library, creating a context, and a global namespace.
+-- This function also loads coreir-stdlib.
 -- @lfunction init
 local function init()
    ffi.cdef(read_file(header_path .. 'coreir-single.h'))
@@ -124,6 +125,7 @@ local function init()
    coreir.ctx = coreir.lib.CORENewContext()
    coreir.global = coreir.lib.COREGetGlobal(coreir.ctx)
 
+   -- Load stdlib
    load_lib('stdlib')
 end
 init()
