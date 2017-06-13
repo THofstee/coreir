@@ -690,6 +690,31 @@ local function add_instance(m, inst, args, inst_name)
    local name = inst_name or unique_name(inst_meta.name)
    local args = args or {}
 
+   local args_len = 0
+   for _ in pairs(args) do
+	  args_len = args_len+1
+   end
+
+   local args_keys = nil
+   local args_vals = nil
+   if args_len > 0 then
+	  args_keys = ffi.new("char*[?]", args_len)
+	  args_vals = ffi.new("COREArg*[?]", args_len)
+	  local i = 0
+	  for k,v in pairs(args) do
+		 args_keys[i] = to_c_str(k)
+		 
+		 if type(v) == 'Number' then
+			args_vals[i] = coreir.lib.COREArgInt(coreir.ctx, v)
+		 elseif type(v) == 'String' then
+			args_vals[i] = coreir.lib.COREArgString(coreir.ctx, to_c_str(v))
+		 end
+		 
+		 i = i+1
+	  end
+   end
+
+   -- local arg_map = coreir.lib.CORENewMap(coreir.ctx, args_keys, args_vals, args_len, ffi.new("COREMapKind", "STR2ARG_MAP"))
    local arg_map = coreir.lib.CORENewMap(coreir.ctx, nil, nil, 0, ffi.new("COREMapKind", "STR2ARG_MAP"))
    local module_inst = coreir.lib.COREModuleDefAddModuleInstance(m_meta.def, to_c_str(name), inst_meta.module, arg_map)
 
@@ -719,8 +744,6 @@ local function connect(m, a, b)
    m_meta.connections[#m_meta.connections+1] = { a, b}
 end
 coreir.connect = connect
-
-local inspect = require 'inspect'
 
 --- Some options to pass in to the lua inspect library
 -- @table inspect_options
@@ -754,5 +777,10 @@ inspect_options.process = function(item, path)
    end
 end
 coreir.inspect_options = inspect_options
+
+local inspect_fn = function(t)
+   return require('inspect')(t, coreir.inspect_options)
+end
+coreir.inspect = inspect_fn
 
 return coreir
