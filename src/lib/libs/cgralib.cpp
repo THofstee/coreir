@@ -10,7 +10,7 @@ Namespace* CoreIRLoadLibrary_cgralib(Context* c) {
   
   //Unary op declaration
   Params widthParams = {{"width",AINT}};
-  cgralib->newTypeGen("UnaryType",widthParams,[](Context* c, Args args) {
+  cgralib->newTypeGen("unary",widthParams,[](Context* c, Args args) { 
     uint width = args.at("width")->get<ArgInt>();
     return c->Record({
       {"in",c->BitIn()->Arr(width)},
@@ -48,11 +48,11 @@ Namespace* CoreIRLoadLibrary_cgralib(Context* c) {
   cgralib->newGeneratorDecl("Const",cgralib->getTypeGen("SrcType"),widthParams,valueParams);
 
   //Reg declaration
-  cgralib->newGeneratorDecl("Reg",cgralib->getTypeGen("UnaryType"),widthParams);
+  cgralib->newGeneratorDecl("Reg",cgralib->getTypeGen("unary"),widthParams);
 
   //IO Declaration
   Params modeParams = {{"mode",ASTRING}};
-  cgralib->newGeneratorDecl("IO",cgralib->getTypeGen("UnaryType"),widthParams,modeParams);
+  cgralib->newGeneratorDecl("IO",cgralib->getTypeGen("unary"),widthParams,modeParams);
 
   //Mem declaration
   Params MemGenParams = {{"width",AINT},{"depth",AINT}};
@@ -81,7 +81,7 @@ Namespace* CoreIRLoadLibrary_cgralib(Context* c) {
       uint bitwidth = args.at("bitwidth")->get<ArgInt>();
       return c->Record({
 	  {"in",c->BitIn()->Arr(bitwidth)},
-	  {"out",c->Bit()->Arr(bitwidth)->Arr(stencil_height)->Arr(stencil_width)}
+	  {"out",c->Bit()->Arr(bitwidth)->Arr(stencil_width)->Arr(stencil_height)}
       });
     }
   );
@@ -98,7 +98,7 @@ Namespace* CoreIRLoadLibrary_cgralib(Context* c) {
     uint image_width = args.at("image_width")->get<ArgInt>();
     uint bitwidth = args.at("bitwidth")->get<ArgInt>();
     assert((bitwidth & (bitwidth-1)) == 0); //Check if power of 2
-    assert(stencil_height > 1);
+    assert(stencil_height > 0);
     assert(stencil_width > 0);
     assert(image_width > stencil_width);
     assert(bitwidth > 0);
@@ -129,7 +129,7 @@ Namespace* CoreIRLoadLibrary_cgralib(Context* c) {
     std::string mem_prefix = "mem_";
     for (uint i = 1; i < stencil_height; ++i) {
       std::string mem_name = mem_prefix + std::to_string(i);
-      def->addInstance(mem_name,Mem,{{"width",aBitwidth},{"depth",aImageWidth}},{{"mode",c->argString("o")}});
+      def->addInstance(mem_name,Mem,{{"width",aBitwidth},{"depth",aImageWidth}},{{"mode",c->argString("linebuffer")}});
 
       // connect the input
       if (i == 1) {
