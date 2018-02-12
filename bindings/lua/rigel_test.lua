@@ -131,7 +131,7 @@ local err = ffi.new("COREBool[1]")
 coreir.lib.COREFlatten(coreir.ctx, getmetatable(stream).module, err)
 
 coreir.print_module(stream)
-print(coreir.get_inst_ref_name(stream.conv)) -- new feature!
+print(coreir.inspect(conv))
 print(coreir.inspect(stream))
 
 coreir.save_module(stream, "_conv.json")
@@ -189,8 +189,20 @@ local function analyze(i)
 	  return rs.modules.constSeq{
 		 type = rs.array2d(rs.uint8, i.args.w, i.args.h),
 		 P = rate, -- @todo
-		 value = flatten_mat(i.args.mat)
+		 value = flatten_mat(i.args.weights)
 	  }
+   elseif m_type == "mult" then
+	  return rs.modules.map{
+		 
+	  }
+   end
+end
+
+local function traverse(m)
+   local instances = getmetatable(m).instances
+
+   for inst,info in pairs(instances) do
+	  analyze(inst)
    end
 end
 
@@ -211,12 +223,10 @@ local partialStencil = rs.connect{
 function makePartialConvolve()
   local convolveInput = rs.input( rs.array2d(rs.uint8,4*rate,4) )
 
-  local filterCoeff = rs.connect{ input=nil, toModule =
-    rs.modules.constSeq{ type=rs.array2d(rs.uint8,4,4), P=rate, value = 
-      { 4, 14, 14,  4,
-        14, 32, 32, 14,
-        14, 32, 32, 14,
-        4, 14, 14,  4} } }
+  local filterCoeff = rs.connect{
+	 input = nil,
+	 toModule = analyze(getmetatable(conv).instances.const_seq)
+  }
                                    
   local merged = rs.connect{ input = rs.concat{ convolveInput, filterCoeff }, 
     toModule = rs.modules.SoAtoAoS{ type={rs.uint8,rs.uint8}, size={4*rate,4} } }
@@ -277,6 +287,10 @@ rs.harness{
    outFile = "convolve_slow", outSize = inSize,
 }
 
+print(inspect(conv_func, {depth = 3}))
+print(inspect(conv_func.inputType))
+print(conv_func.inputType)
+
 --- TEST
 
 local namespace = coreir.global
@@ -309,3 +323,7 @@ local module_cstr = ffi.new("char[?]", #"_test.json"+1, "_test.json")
 local err = ffi.new("COREBool[1]")
 coreir.lib.CORESaveModule(m, module_cstr, err)
    
+-- @todo remove the handshake signals from coreir module connections
+-- @todo parse the graph by traversing based on the direction of connections
+-- @todo add a fifo to buffer either end of the computation (to/from ram)
+-- @todo finalize the connection/interpretation of different rigel modules
